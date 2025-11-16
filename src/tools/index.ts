@@ -53,6 +53,13 @@ import {
   registerUpdateScheduledTransactionTool,
   registerDeleteScheduledTransactionTool,
 } from "./scheduled-transactions.js";
+import {
+  registerStageCategorizationTool,
+  registerStageSplitTool,
+  registerReviewChangesTool,
+  registerApplyChangesTool,
+  registerClearChangesTool,
+} from "./staging-tools.js";
 
 export interface ToolRegistrationContext {
   server: McpServer;
@@ -112,4 +119,11 @@ export function registerTools({ server }: ToolRegistrationContext): void {
   registerGetScheduledTransactionByIdTool(server);
   registerUpdateScheduledTransactionTool(server);
   registerDeleteScheduledTransactionTool(server);
+
+  // Staging Tools (5 tools)
+  registerStageCategorizationTool(server);
+  registerStageSplitTool(server);
+  registerReviewChangesTool(server);
+  registerApplyChangesTool(server);
+  registerClearChangesTool(server);
 }
