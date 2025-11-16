@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { getPayees, updatePayee } from "../api/index.js";
-import { errorResult, successResult } from "./utils.js";
+import { errorResult, isReadOnly, readOnlyResult, successResult } from "./utils.js";
 
 export function registerGetPayeesTool(server: McpServer): void {
   const schema = z.object({
@@ -51,6 +51,10 @@ export function registerUpdatePayeeTool(server: McpServer): void {
       inputSchema: schema.shape,
     },
     async (args) => {
+      if (isReadOnly()) {
+        return readOnlyResult();
+      }
+
       try {
         const response = await updatePayee(args);
         return successResult(

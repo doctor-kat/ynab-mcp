@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { createAccount, getAccounts } from "../api/index.js";
-import { errorResult, successResult } from "./utils.js";
+import { errorResult, isReadOnly, readOnlyResult, successResult } from "./utils.js";
 
 export function registerGetAccountsTool(server: McpServer): void {
   const schema = z.object({
@@ -71,6 +71,10 @@ export function registerCreateAccountTool(server: McpServer): void {
       inputSchema: schema.shape,
     },
     async (args) => {
+      if (isReadOnly()) {
+        return readOnlyResult();
+      }
+
       try {
         const response = await createAccount(args);
         return successResult(

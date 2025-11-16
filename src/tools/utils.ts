@@ -1,4 +1,32 @@
 import { YnabApiError } from "../api/errors.js";
+import { loadEnv } from "../env.js";
+
+/**
+ * Check if the server is in read-only mode
+ */
+export function isReadOnly(): boolean {
+  const env = loadEnv();
+  return env.READ_ONLY;
+}
+
+/**
+ * Return a read-only mode error result
+ */
+export function readOnlyResult(): any {
+  return {
+    content: [
+      {
+        type: "text",
+        text: "🔒 Read-only mode enabled. This operation would modify data and has been blocked.",
+      },
+    ],
+    data: {
+      readOnly: true,
+      message: "Server is running in read-only mode",
+    },
+    isError: true,
+  };
+}
 
 export function successResult(title: string, data: unknown): any {
   return {

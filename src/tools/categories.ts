@@ -6,7 +6,7 @@ import {
   updateCategory,
   updateMonthCategory,
 } from "../api/index.js";
-import { errorResult, successResult } from "./utils.js";
+import { errorResult, isReadOnly, readOnlyResult, successResult } from "./utils.js";
 
 export function registerGetCategoriesTool(server: McpServer): void {
   const schema = z.object({
@@ -85,6 +85,10 @@ export function registerUpdateCategoryTool(server: McpServer): void {
       inputSchema: schema.shape,
     },
     async (args) => {
+      if (isReadOnly()) {
+        return readOnlyResult();
+      }
+
       try {
         const response = await updateCategory(args);
         return successResult(
@@ -155,6 +159,10 @@ export function registerUpdateMonthCategoryTool(server: McpServer): void {
       inputSchema: schema.shape,
     },
     async (args) => {
+      if (isReadOnly()) {
+        return readOnlyResult();
+      }
+
       try {
         const response = await updateMonthCategory(args);
         return successResult(

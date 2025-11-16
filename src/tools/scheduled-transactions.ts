@@ -6,7 +6,7 @@ import {
   getScheduledTransactions,
   updateScheduledTransaction,
 } from "../api/index.js";
-import { errorResult, successResult } from "./utils.js";
+import { errorResult, isReadOnly, readOnlyResult, successResult } from "./utils.js";
 
 export function registerGetScheduledTransactionsTool(server: McpServer): void {
   const schema = z.object({
@@ -88,6 +88,10 @@ export function registerCreateScheduledTransactionTool(
       inputSchema: schema.shape,
     },
     async (args) => {
+      if (isReadOnly()) {
+        return readOnlyResult();
+      }
+
       try {
         const response = await createScheduledTransaction(args);
         return successResult(
@@ -164,6 +168,10 @@ export function registerUpdateScheduledTransactionTool(
       inputSchema: schema.shape,
     },
     async (args) => {
+      if (isReadOnly()) {
+        return readOnlyResult();
+      }
+
       try {
         const response = await updateScheduledTransaction(args);
         return successResult(
@@ -196,6 +204,10 @@ export function registerDeleteScheduledTransactionTool(
       inputSchema: schema.shape,
     },
     async (args) => {
+      if (isReadOnly()) {
+        return readOnlyResult();
+      }
+
       try {
         const response = await deleteScheduledTransaction(args);
         return successResult(

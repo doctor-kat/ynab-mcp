@@ -12,6 +12,10 @@ const envSchema = z
     YNAB_CLIENT_ID: z.string().min(1).optional(),
     YNAB_CLIENT_SECRET: z.string().min(1).optional(),
     YNAB_REDIRECT_URI: z.string().url().optional(),
+    READ_ONLY: z
+      .enum(["true", "false"])
+      .transform((val) => val === "true")
+      .default("false"),
   })
   .superRefine((values, ctx) => {
     const hasClientApp =
@@ -46,6 +50,7 @@ export function loadEnv(): Env {
     YNAB_CLIENT_ID: process.env.YNAB_CLIENT_ID,
     YNAB_CLIENT_SECRET: process.env.YNAB_CLIENT_SECRET,
     YNAB_REDIRECT_URI: process.env.YNAB_REDIRECT_URI,
+    READ_ONLY: process.env.READ_ONLY,
   });
 
   if (!parsed.success) {

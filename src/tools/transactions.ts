@@ -14,7 +14,9 @@ import {
 import {
   errorResult,
   getResultSizeWarning,
+  isReadOnly,
   limitResults,
+  readOnlyResult,
   successResult,
 } from "./utils.js";
 
@@ -198,6 +200,10 @@ export function registerCreateTransactionTool(server: McpServer): void {
       inputSchema: schema.shape,
     },
     async (args) => {
+      if (isReadOnly()) {
+        return readOnlyResult();
+      }
+
       try {
         const response = await createTransaction(args);
         return successResult(
@@ -257,6 +263,10 @@ export function registerUpdateTransactionsTool(server: McpServer): void {
       inputSchema: schema.shape,
     },
     async (args) => {
+      if (isReadOnly()) {
+        return readOnlyResult();
+      }
+
       try {
         const response = await updateTransactions(args);
         return successResult(
@@ -284,6 +294,10 @@ export function registerImportTransactionsTool(server: McpServer): void {
       inputSchema: schema.shape,
     },
     async (args) => {
+      if (isReadOnly()) {
+        return readOnlyResult();
+      }
+
       try {
         const response = await importTransactions(args);
         return successResult(
@@ -311,6 +325,10 @@ export function registerDeleteTransactionTool(server: McpServer): void {
       inputSchema: schema.shape,
     },
     async (args) => {
+      if (isReadOnly()) {
+        return readOnlyResult();
+      }
+
       try {
         const response = await deleteTransaction(args);
         return successResult(

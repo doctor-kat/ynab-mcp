@@ -7,7 +7,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { stagedChanges } from "../staging/staged-changes.js";
 import { ChangeType } from "../staging/types.js";
 import { getTransactionById, updateTransactions } from "../api/index.js";
-import { errorResult, successResult } from "./utils.js";
+import { errorResult, isReadOnly, readOnlyResult, successResult } from "./utils.js";
 import type { SaveSubTransaction } from "../api/transactions/SaveSubTransaction.js";
 
 /**
@@ -269,6 +269,10 @@ export function registerApplyChangesTool(server: McpServer): void {
       inputSchema: schema.shape,
     },
     async (args) => {
+      if (isReadOnly()) {
+        return readOnlyResult();
+      }
+
       try {
         let changesToApply = stagedChanges.getStagedChanges();
 
