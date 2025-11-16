@@ -23,13 +23,13 @@ A TypeScript Model Context Protocol (MCP) server that wraps the [YNAB API](https
    ```
    You can substitute `pnpm` with `npm` or `yarn` if preferred.
 
-3. **Configure environment variables**  
+3. **Configure environment variables**
    Copy `env.example` to `.env` and fill in your credentials.
    ```bash
    cp env.example .env
    ```
-   - `YNAB_ACCESS_TOKEN` for personal access tokens **or**
-   - `YNAB_CLIENT_ID`, `YNAB_CLIENT_SECRET`, `YNAB_REDIRECT_URI` for OAuth flows
+   - `YNAB_ACCESS_TOKEN` - Your YNAB Personal Access Token (required)
+   - `READ_ONLY` - Set to `true` to enable read-only mode (optional, defaults to `false`)
 
 4. **Generate TypeScript types**  
    ```bash
@@ -56,7 +56,7 @@ A TypeScript Model Context Protocol (MCP) server that wraps the [YNAB API](https
 
 - **LM Studio 0.3.17 or later** installed
 - **Node.js 20+** and **pnpm** installed
-- **YNAB Access Token** or OAuth credentials configured (see step 3 in Getting Started)
+- **YNAB Personal Access Token** configured (see step 3 in Getting Started)
 
 ### Configuration Steps
 
@@ -86,29 +86,18 @@ A TypeScript Model Context Protocol (MCP) server that wraps the [YNAB API](https
          "command": "node",
          "args": ["/absolute/path/to/ynab-mcp/dist/index.js"],
          "env": {
-           "YNAB_ACCESS_TOKEN": "your-ynab-access-token-here"
-         }
-       },
-       "ynab-dev": {
-         "command": "pnpm",
-         "args": ["--dir", "/absolute/path/to/ynab-mcp", "dev"],
-         "env": {
-           "YNAB_ACCESS_TOKEN": "your-ynab-access-token-here"
+           "YNAB_ACCESS_TOKEN": "your-ynab-access-token-here",
+           "READ_ONLY": "true"
          }
        }
      }
    }
    ```
 
-   **Configuration options:**
-   - **`ynab`** - Production mode using the compiled build (requires `pnpm build` first)
-   - **`ynab-dev`** - Development mode using `tsx` for live TypeScript execution (no build required)
-
    **Important:**
    - Replace `/absolute/path/to/ynab-mcp` with your actual repository path
    - Replace `your-ynab-access-token-here` with your [YNAB personal access token](https://api.ynab.com/)
-   - For OAuth flows, add `YNAB_CLIENT_ID`, `YNAB_CLIENT_SECRET`, and `YNAB_REDIRECT_URI` instead
-   - You can use either configuration or both - choose based on your workflow
+   - Set `READ_ONLY` to `"false"` to enable write operations (use with caution)
 
 5. **Save and reload**
    - Save the `mcp.json` file (LM Studio auto-detects changes)

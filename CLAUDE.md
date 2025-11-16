@@ -176,8 +176,10 @@ See `tests/README.md` for detailed testing guide and best practices
 
 ## Configuration Requirements
 
-The server requires either:
-1. `YNAB_ACCESS_TOKEN` for personal access tokens OR
-2. The trio: `YNAB_CLIENT_ID`, `YNAB_CLIENT_SECRET`, `YNAB_REDIRECT_URI` for OAuth flows
+Required environment variables:
+- `YNAB_ACCESS_TOKEN` - Personal Access Token from YNAB (required)
+- `READ_ONLY` - Set to `true` to enable read-only mode (optional, defaults to `false`)
+- `YNAB_BASE_URL` - YNAB API base URL (optional, defaults to `https://api.ynab.com/v1`)
+- `MCP_SERVER_NAME` - Server name (optional, defaults to `ynab-mcp-server`)
 
-Environment variables are validated at runtime with helpful error messages.
+All environment variables are validated at runtime with helpful error messages.

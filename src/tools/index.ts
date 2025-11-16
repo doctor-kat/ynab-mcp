@@ -51,36 +51,45 @@ export interface ToolRegistrationContext {
   server: McpServer;
 }
 
-export function registerTools({ server }: ToolRegistrationContext): void {
+export function registerTools({ server }: ToolRegistrationContext): number {
+  let toolCount = 0;
+
   // User (1 tool)
   registerGetUserTool(server);
+  toolCount += 1;
 
   // Budgets (3 tools)
   registerGetBudgetsTool(server);
   registerGetBudgetByIdTool(server);
   registerGetBudgetSettingsByIdTool(server);
+  toolCount += 3;
 
   // Accounts (2 tools)
   registerGetAccountsTool(server);
   registerCreateAccountTool(server);
+  toolCount += 2;
 
   // Categories (4 tools)
   registerGetCategoriesTool(server);
   registerUpdateCategoryTool(server);
   registerGetMonthCategoryByIdTool(server);
   registerUpdateMonthCategoryTool(server);
+  toolCount += 4;
 
   // Payees (2 tools)
   registerGetPayeesTool(server);
   registerUpdatePayeeTool(server);
+  toolCount += 2;
 
   // Payee Locations (2 tools)
   registerGetPayeeLocationsTool(server);
   registerGetPayeeLocationsByPayeeTool(server);
+  toolCount += 2;
 
   // Months (2 tools)
   registerGetBudgetMonthsTool(server);
   registerGetBudgetMonthTool(server);
+  toolCount += 2;
 
   // Transactions (5 tools)
   registerGetTransactionsTool(server); // Now supports accountId, categoryId, payeeId, month filters
@@ -88,12 +97,14 @@ export function registerTools({ server }: ToolRegistrationContext): void {
   registerUpdateTransactionsTool(server);
   registerImportTransactionsTool(server);
   registerDeleteTransactionTool(server);
+  toolCount += 5;
 
   // Scheduled Transactions (4 tools)
   registerGetScheduledTransactionsTool(server);
   registerCreateScheduledTransactionTool(server);
   registerUpdateScheduledTransactionTool(server);
   registerDeleteScheduledTransactionTool(server);
+  toolCount += 4;
 
   // Staging Tools (5 tools)
   registerStageCategorizationTool(server);
@@ -101,4 +112,7 @@ export function registerTools({ server }: ToolRegistrationContext): void {
   registerReviewChangesTool(server);
   registerApplyChangesTool(server);
   registerClearChangesTool(server);
+  toolCount += 5;
+
+  return toolCount;
 }

@@ -7,8 +7,13 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { stagedChanges } from "../staging/staged-changes.js";
 import { ChangeType } from "../staging/types.js";
 import { getTransactionById, updateTransactions } from "../api/index.js";
-import { errorResult, isReadOnly, readOnlyResult, successResult } from "./utils.js";
-import type { SaveSubTransaction } from "../api/transactions/SaveSubTransaction.js";
+import {
+  errorResult,
+  isReadOnly,
+  readOnlyResult,
+  successResult,
+} from "./utils.js";
+import type { SaveSubTransaction } from "../api/index.js";
 
 /**
  * Stage a categorization change without applying it
@@ -315,15 +320,40 @@ export function registerApplyChangesTool(server: McpServer): void {
               transactions,
             });
 
-            // All succeeded - remove from staged and record success
+            // Verify response contains transaction_ids
+            if (!response.data.transaction_ids || response.data.transaction_ids.length === 0) {
+              throw new Error("Update response did not contain any transaction_ids");
+            }
+
+            // Create set of successfully updated transaction IDs for fast lookup
+            const updatedIds = new Set(response.data.transaction_ids);
+
+            // Log duplicate import IDs if present (informational only)
+            if (response.data.duplicate_import_ids && response.data.duplicate_import_ids.length > 0) {
+              console.warn(`⚠️  Duplicate import IDs detected: ${response.data.duplicate_import_ids.join(", ")}`);
+            }
+
+            // Process each change based on whether its transaction was updated
             for (const change of budgetChanges) {
-              stagedChanges.clearStagedChange(change.id);
-              results.push({
-                changeId: change.id,
-                transactionId: change.transactionId,
-                status: "success",
-              });
-              successCount++;
+              if (updatedIds.has(change.transactionId)) {
+                // Transaction was successfully updated
+                stagedChanges.clearStagedChange(change.id);
+                results.push({
+                  changeId: change.id,
+                  transactionId: change.transactionId,
+                  status: "success",
+                });
+                successCount++;
+              } else {
+                // Transaction was not in the response
+                results.push({
+                  changeId: change.id,
+                  transactionId: change.transactionId,
+                  status: "failed",
+                  error: "Transaction ID not found in update response",
+                });
+                failureCount++;
+              }
             }
           } catch (error) {
             // Batch failed - mark all in this batch as failed

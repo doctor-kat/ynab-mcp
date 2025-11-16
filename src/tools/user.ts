@@ -13,7 +13,7 @@ export function registerGetUserTool(server: McpServer): void {
       description: "Returns authenticated user information",
       inputSchema: schema.shape,
     },
-    async (args) => {
+    async () => {
       try {
         const response = await getUser();
         return successResult("User information retrieved", response);

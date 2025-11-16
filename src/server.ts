@@ -12,7 +12,7 @@ export interface ServerBundle {
 export function createServer(env: Env = loadEnv()): ServerBundle {
   initializeClient({
     baseUrl: env.YNAB_BASE_URL,
-    accessToken: env.YNAB_ACCESS_TOKEN!,
+    accessToken: env.YNAB_ACCESS_TOKEN,
   });
 
   const server = new McpServer(
@@ -29,7 +29,9 @@ export function createServer(env: Env = loadEnv()): ServerBundle {
     },
   );
 
-  registerTools({ server });
+  const toolCount = registerTools({ server });
+  console.info(`🔧 Registered ${toolCount} MCP tools`);
+
   return { server };
 }
 
