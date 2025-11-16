@@ -83,9 +83,20 @@ The server registers 35 tools across all YNAB API endpoints:
 All tools follow the naming pattern `ynab.{operationName}` (e.g., `ynab.getTransactions`, `ynab.updateTransaction`)
 
 ### Testing Approach:
-- Node built-in test runner (`node --test`)
-- Mocking HTTP requests to verify behavior without network calls
-- Tests validate both success and error scenarios
+The project uses a comprehensive multi-layer testing strategy:
+
+- **Test Runner**: Vitest (`pnpm test`)
+- **Test Structure**:
+  - `tests/api/` - Unit tests for API client functions with mocked HTTP
+  - `tests/server/` - Integration tests for MCP server initialization
+  - `tests/e2e/` - End-to-end tests using MCP Client SDK (skipped by default)
+  - `tests/helpers/` - Mock utilities and test environment helpers
+- **Features**: Fast execution, watch mode, UI mode, code coverage, and TypeScript support
+- **Mocking Strategy**: Mock HTTP fetch implementation to avoid network calls
+- **Coverage**: Tests validate success scenarios, error handling, parameter validation, and schema compliance
+- **Manual Testing**: MCP Inspector for interactive tool testing during development
+
+See `tests/README.md` for detailed testing guide and best practices
 
 ## Configuration Requirements
 
