@@ -3,7 +3,7 @@
  */
 
 import { describe, it, beforeEach, afterEach, expect, vi } from "vitest";
-import { budgetContext } from "../../src/budget/budget-context.js";
+import { budgetStore } from "../../src/budget/budget-store.js";
 import { initializeClient } from "../../src/api/client.js";
 import { createMockFetch, mockYnabResponses } from "../helpers/mock-fetch.js";
 
@@ -11,7 +11,7 @@ describe("BudgetContext", () => {
   let mockFetch: ReturnType<typeof createMockFetch>;
 
   beforeEach(() => {
-    budgetContext.reset();
+    budgetStore.getState().reset();
   });
 
   afterEach(() => {
@@ -20,7 +20,7 @@ describe("BudgetContext", () => {
 
   describe("initialization", () => {
     it("should initialize with empty state", () => {
-      const context = budgetContext.getBudgetContext();
+      const context = budgetStore.getState().getBudgetContext();
       expect(context.budgets).toEqual([]);
       expect(context.activeBudgetId).toBeNull();
       expect(context.lastFetched).toBeNull();
@@ -40,9 +40,9 @@ describe("BudgetContext", () => {
         accessToken: "test-token",
       });
 
-      await budgetContext.initialize();
+      await budgetStore.getState().initialize();
 
-      const context = budgetContext.getBudgetContext();
+      const context = budgetStore.getState().getBudgetContext();
       expect(context.budgets.length).toBe(1);
       expect(context.budgets[0].id).toBe("budget-123");
       expect(context.budgets[0].name).toBe("Test Budget");
@@ -66,9 +66,9 @@ describe("BudgetContext", () => {
         accessToken: "test-token",
       });
 
-      await budgetContext.initialize();
+      await budgetStore.getState().initialize();
 
-      const context = budgetContext.getBudgetContext();
+      const context = budgetStore.getState().getBudgetContext();
       expect(context.activeBudgetId).toBe("budget-123");
       expect(context.activeBudgetName).toBe("Test Budget");
     });
@@ -103,9 +103,9 @@ describe("BudgetContext", () => {
         accessToken: "test-token",
       });
 
-      await budgetContext.initialize();
+      await budgetStore.getState().initialize();
 
-      const context = budgetContext.getBudgetContext();
+      const context = budgetStore.getState().getBudgetContext();
       expect(context.budgets.length).toBe(2);
       expect(context.activeBudgetId).toBeNull();
     });
@@ -124,10 +124,10 @@ describe("BudgetContext", () => {
       });
 
       // Should not throw - errors are logged but not thrown
-      await expect(budgetContext.initialize()).resolves.toBeUndefined();
+      await expect(budgetStore.getState().initialize()).resolves.toBeUndefined();
 
       // Cache should remain empty
-      const context = budgetContext.getBudgetContext();
+      const context = budgetStore.getState().getBudgetContext();
       expect(context.budgets).toEqual([]);
       expect(context.activeBudgetId).toBeNull();
     });
@@ -164,14 +164,14 @@ describe("BudgetContext", () => {
         accessToken: "test-token",
       });
 
-      await budgetContext.initialize();
+      await budgetStore.getState().initialize();
       mockFetch.reset(); // Reset call count
     });
 
     it("should set active budget without API calls", () => {
-      budgetContext.setActiveBudget("budget-1");
+      budgetStore.getState().setActiveBudget("budget-1");
 
-      const context = budgetContext.getBudgetContext();
+      const context = budgetStore.getState().getBudgetContext();
       expect(context.activeBudgetId).toBe("budget-1");
       expect(context.activeBudgetName).toBe("Personal Budget");
 
@@ -181,18 +181,18 @@ describe("BudgetContext", () => {
 
     it("should throw error for invalid budget ID", () => {
       expect(() => {
-        budgetContext.setActiveBudget("invalid-budget");
+        budgetStore.getState().setActiveBudget("invalid-budget");
       }).toThrow(/not found/);
     });
 
     it("should allow switching active budgets", () => {
-      budgetContext.setActiveBudget("budget-1");
-      expect(budgetContext.getActiveBudgetId()).toBe("budget-1");
+      budgetStore.getState().setActiveBudget("budget-1");
+      expect(budgetStore.getState().getActiveBudgetId()).toBe("budget-1");
 
-      budgetContext.setActiveBudget("budget-2");
-      expect(budgetContext.getActiveBudgetId()).toBe("budget-2");
+      budgetStore.getState().setActiveBudget("budget-2");
+      expect(budgetStore.getState().getActiveBudgetId()).toBe("budget-2");
 
-      const context = budgetContext.getBudgetContext();
+      const context = budgetStore.getState().getBudgetContext();
       expect(context.activeBudgetName).toBe("Business Budget");
     });
   });
@@ -211,10 +211,10 @@ describe("BudgetContext", () => {
         accessToken: "test-token",
       });
 
-      await budgetContext.initialize();
+      await budgetStore.getState().initialize();
       mockFetch.reset();
 
-      const context = budgetContext.getBudgetContext();
+      const context = budgetStore.getState().getBudgetContext();
 
       expect(context.budgets.length).toBe(1);
       expect(context.budgets[0].id).toBe("budget-123");
@@ -242,12 +242,12 @@ describe("BudgetContext", () => {
         accessToken: "test-token",
       });
 
-      await budgetContext.initialize();
+      await budgetStore.getState().initialize();
       mockFetch.reset();
     });
 
     it("should retrieve budget metadata without API calls", () => {
-      const metadata = budgetContext.getBudgetMetadata("budget-123");
+      const metadata = budgetStore.getState().getBudgetMetadata("budget-123");
 
       expect(metadata).toBeTruthy();
       expect(metadata?.name).toBe("Test Budget");
@@ -258,7 +258,7 @@ describe("BudgetContext", () => {
     });
 
     it("should return undefined for non-existent budget", () => {
-      const metadata = budgetContext.getBudgetMetadata("invalid-budget");
+      const metadata = budgetStore.getState().getBudgetMetadata("invalid-budget");
       expect(metadata).toBeUndefined();
     });
   });
@@ -294,9 +294,9 @@ describe("BudgetContext", () => {
         accessToken: "test-token",
       });
 
-      await budgetContext.initialize();
-      expect(budgetContext.getAllBudgets().length).toBe(1);
-      expect(budgetContext.getAllBudgets()[0].name).toBe("Old Budget");
+      await budgetStore.getState().initialize();
+      expect(budgetStore.getState().getAllBudgets().length).toBe(1);
+      expect(budgetStore.getState().getAllBudgets()[0].name).toBe("Old Budget");
 
       // Update the response in the same Map
       responsesMap.set("/budgets", {
@@ -321,9 +321,9 @@ describe("BudgetContext", () => {
       });
 
       // Refresh
-      await budgetContext.refreshCache();
+      await budgetStore.getState().refreshCache();
 
-      const budgets = budgetContext.getAllBudgets();
+      const budgets = budgetStore.getState().getAllBudgets();
       expect(budgets.length).toBe(2);
       expect(budgets[0].name).toBe("Updated Budget");
       expect(budgets[1].name).toBe("New Budget");
@@ -344,14 +344,14 @@ describe("BudgetContext", () => {
         accessToken: "test-token",
       });
 
-      await budgetContext.initialize();
-      expect(budgetContext.getActiveBudgetId()).toBe("budget-123");
+      await budgetStore.getState().initialize();
+      expect(budgetStore.getState().getActiveBudgetId()).toBe("budget-123");
 
-      budgetContext.clearActiveBudget();
-      expect(budgetContext.getActiveBudgetId()).toBeNull();
+      budgetStore.getState().clearActiveBudget();
+      expect(budgetStore.getState().getActiveBudgetId()).toBeNull();
 
       // Cache should still have budgets
-      expect(budgetContext.getAllBudgets().length).toBe(1);
+      expect(budgetStore.getState().getAllBudgets().length).toBe(1);
     });
   });
 
@@ -369,12 +369,12 @@ describe("BudgetContext", () => {
         accessToken: "test-token",
       });
 
-      await budgetContext.initialize();
-      const sessionId1 = budgetContext.getBudgetContext().sessionId;
+      await budgetStore.getState().initialize();
+      const sessionId1 = budgetStore.getState().getBudgetContext().sessionId;
 
-      budgetContext.reset();
+      budgetStore.getState().reset();
 
-      const context = budgetContext.getBudgetContext();
+      const context = budgetStore.getState().getBudgetContext();
       expect(context.budgets).toEqual([]);
       expect(context.activeBudgetId).toBeNull();
       expect(context.lastFetched).toBeNull();

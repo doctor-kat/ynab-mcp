@@ -3,21 +3,20 @@
  */
 
 import { describe, it, beforeEach, expect } from "vitest";
-import { stagedChanges } from "../../src/staging/staged-changes.js";
-import { ChangeType } from "../../src/staging/types.js";
+import { stagingStore, ChangeType } from "../../src/staging/index.js";
 
 describe("StagedChanges", () => {
   beforeEach(() => {
-    stagedChanges.reset();
+    stagingStore.getState().reset();
   });
 
   it("should reset tracker state", () => {
-    const stats = stagedChanges.getStats();
+    const stats = stagingStore.getState().getStats();
     expect(stats.stagedCount).toBe(0);
   });
 
   it("should stage a categorization change", () => {
-    const stagedChange = stagedChanges.stageChange({
+    const stagedChange = stagingStore.getState().stageChange({
       type: ChangeType.CATEGORIZATION,
       budgetId: "budget-123",
       transactionId: "txn-456",
@@ -35,12 +34,12 @@ describe("StagedChanges", () => {
     expect(stagedChange.budgetId).toBe("budget-123");
     expect(stagedChange.transactionId).toBe("txn-456");
 
-    const stats = stagedChanges.getStats();
+    const stats = stagingStore.getState().getStats();
     expect(stats.stagedCount).toBe(1);
   });
 
   it("should stage a split change", () => {
-    const stagedChange = stagedChanges.stageChange({
+    const stagedChange = stagingStore.getState().stageChange({
       type: ChangeType.SPLIT,
       budgetId: "budget-123",
       transactionId: "txn-789",
@@ -60,12 +59,12 @@ describe("StagedChanges", () => {
     expect(stagedChange.type).toBe(ChangeType.SPLIT);
     expect(stagedChange.proposedChanges.subtransactions?.length).toBe(2);
 
-    const stats = stagedChanges.getStats();
+    const stats = stagingStore.getState().getStats();
     expect(stats.stagedCount).toBe(1);
   });
 
   it("should retrieve staged changes", () => {
-    stagedChanges.stageChange({
+    stagingStore.getState().stageChange({
       type: ChangeType.CATEGORIZATION,
       budgetId: "budget-123",
       transactionId: "txn-1",
@@ -74,7 +73,7 @@ describe("StagedChanges", () => {
       proposedChanges: {},
     });
 
-    stagedChanges.stageChange({
+    stagingStore.getState().stageChange({
       type: ChangeType.CATEGORIZATION,
       budgetId: "budget-123",
       transactionId: "txn-2",
@@ -83,12 +82,12 @@ describe("StagedChanges", () => {
       proposedChanges: {},
     });
 
-    const changes = stagedChanges.getStagedChanges();
+    const changes = stagingStore.getState().getStagedChanges();
     expect(changes.length).toBe(2);
   });
 
   it("should filter staged changes by transaction", () => {
-    stagedChanges.stageChange({
+    stagingStore.getState().stageChange({
       type: ChangeType.CATEGORIZATION,
       budgetId: "budget-123",
       transactionId: "txn-1",
@@ -97,7 +96,7 @@ describe("StagedChanges", () => {
       proposedChanges: {},
     });
 
-    stagedChanges.stageChange({
+    stagingStore.getState().stageChange({
       type: ChangeType.CATEGORIZATION,
       budgetId: "budget-123",
       transactionId: "txn-2",
@@ -106,7 +105,7 @@ describe("StagedChanges", () => {
       proposedChanges: {},
     });
 
-    const filtered = stagedChanges.getStagedChangesForTransaction(
+    const filtered = stagingStore.getState().getStagedChangesForTransaction(
       "budget-123",
       "txn-1"
     );
@@ -115,7 +114,7 @@ describe("StagedChanges", () => {
   });
 
   it("should clear all staged changes", () => {
-    stagedChanges.stageChange({
+    stagingStore.getState().stageChange({
       type: ChangeType.CATEGORIZATION,
       budgetId: "budget-123",
       transactionId: "txn-1",
@@ -124,7 +123,7 @@ describe("StagedChanges", () => {
       proposedChanges: {},
     });
 
-    stagedChanges.stageChange({
+    stagingStore.getState().stageChange({
       type: ChangeType.CATEGORIZATION,
       budgetId: "budget-123",
       transactionId: "txn-2",
@@ -133,15 +132,15 @@ describe("StagedChanges", () => {
       proposedChanges: {},
     });
 
-    const count = stagedChanges.clearStagedChanges();
+    const count = stagingStore.getState().clearStagedChanges();
     expect(count).toBe(2);
 
-    const stats = stagedChanges.getStats();
+    const stats = stagingStore.getState().getStats();
     expect(stats.stagedCount).toBe(0);
   });
 
   it("should clear specific staged change", () => {
-    const staged1 = stagedChanges.stageChange({
+    const staged1 = stagingStore.getState().stageChange({
       type: ChangeType.CATEGORIZATION,
       budgetId: "budget-123",
       transactionId: "txn-1",
@@ -150,7 +149,7 @@ describe("StagedChanges", () => {
       proposedChanges: {},
     });
 
-    const staged2 = stagedChanges.stageChange({
+    const staged2 = stagingStore.getState().stageChange({
       type: ChangeType.CATEGORIZATION,
       budgetId: "budget-123",
       transactionId: "txn-2",
@@ -159,22 +158,22 @@ describe("StagedChanges", () => {
       proposedChanges: {},
     });
 
-    const cleared = stagedChanges.clearStagedChange(staged1.id);
+    const cleared = stagingStore.getState().clearStagedChange(staged1.id);
     expect(cleared).toBe(true);
 
-    const stats = stagedChanges.getStats();
+    const stats = stagingStore.getState().getStats();
     expect(stats.stagedCount).toBe(1);
 
     // staged2 should still exist
-    const remaining = stagedChanges.getStagedChange(staged2.id);
+    const remaining = stagingStore.getState().getStagedChange(staged2.id);
     expect(remaining).toBeTruthy();
   });
 
   it("should have unique session ID after reset", () => {
-    const sessionId1 = stagedChanges.getSessionId();
+    const sessionId1 = stagingStore.getState().getSessionId();
 
-    stagedChanges.reset();
-    const sessionId2 = stagedChanges.getSessionId();
+    stagingStore.getState().reset();
+    const sessionId2 = stagingStore.getState().getSessionId();
 
     expect(sessionId1).not.toBe(sessionId2);
   });

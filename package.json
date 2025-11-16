@@ -19,7 +19,8 @@
     "@modelcontextprotocol/sdk": "^1.21.1",
     "dotenv": "^16.4.5",
     "undici": "^5.28.4",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@types/node": "^20.11.30",

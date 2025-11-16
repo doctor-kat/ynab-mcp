@@ -1,2 +1,3 @@
-export { budgetContext, BudgetContextManager } from "./budget-context.js";
-export type { BudgetContext, BudgetMetadata, BudgetContextResponse } from "./types.js";
+export { budgetStore } from "./budget-store.js";
+export type { BudgetState, BudgetActions } from "./budget-store.js";
+export type { BudgetMetadata, BudgetContextResponse } from "./types.js";

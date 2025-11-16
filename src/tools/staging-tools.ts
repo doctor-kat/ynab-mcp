@@ -4,8 +4,7 @@
 
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { stagedChanges } from "../staging/staged-changes.js";
-import { ChangeType } from "../staging/types.js";
+import { stagingStore, ChangeType } from "../staging/index.js";
 import { getTransactionById, updateTransactions } from "../api/index.js";
 import {
   errorResult,
@@ -49,7 +48,7 @@ export function registerStageCategorizationTool(server: McpServer): void {
         const transaction = currentTx.data.transaction;
 
         // Stage the change
-        const stagedChange = stagedChanges.stageChange({
+        const stagedChange = stagingStore.getState().stageChange({
           type: ChangeType.CATEGORIZATION,
           budgetId: args.budgetId,
           transactionId: args.transactionId,
@@ -149,7 +148,7 @@ export function registerStageSplitTool(server: McpServer): void {
         }
 
         // Stage the change
-        const stagedChange = stagedChanges.stageChange({
+        const stagedChange = stagingStore.getState().stageChange({
           type: ChangeType.SPLIT,
           budgetId: args.budgetId,
           transactionId: args.transactionId,
@@ -204,7 +203,7 @@ export function registerReviewChangesTool(server: McpServer): void {
     },
     async (args) => {
       try {
-        let changes = stagedChanges.getStagedChanges();
+        let changes = stagingStore.getState().getStagedChanges();
 
         // Filter by transaction if specified
         if (args.transactionId) {
@@ -279,7 +278,7 @@ export function registerApplyChangesTool(server: McpServer): void {
       }
 
       try {
-        let changesToApply = stagedChanges.getStagedChanges();
+        let changesToApply = stagingStore.getState().getStagedChanges();
 
         // Filter by specific IDs if provided
         if (args.changeIds && args.changeIds.length > 0) {
@@ -337,7 +336,7 @@ export function registerApplyChangesTool(server: McpServer): void {
             for (const change of budgetChanges) {
               if (updatedIds.has(change.transactionId)) {
                 // Transaction was successfully updated
-                stagedChanges.clearStagedChange(change.id);
+                stagingStore.getState().clearStagedChange(change.id);
                 results.push({
                   changeId: change.id,
                   transactionId: change.transactionId,
@@ -409,7 +408,7 @@ export function registerClearChangesTool(server: McpServer): void {
       try {
         if (!args.changeIds || args.changeIds.length === 0) {
           // Clear all
-          const count = stagedChanges.clearStagedChanges();
+          const count = stagingStore.getState().clearStagedChanges();
           return successResult(`🗑️ Cleared ${count} staged change(s)`, {
             clearedCount: count,
           });
@@ -417,7 +416,7 @@ export function registerClearChangesTool(server: McpServer): void {
           // Clear specific changes
           let clearedCount = 0;
           for (const id of args.changeIds) {
-            if (stagedChanges.clearStagedChange(id)) {
+            if (stagingStore.getState().clearStagedChange(id)) {
               clearedCount++;
             }
           }

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { budgetContext } from "../budget/index.js";
+import { budgetStore } from "../budget/index.js";
 import { errorResult, successResult } from "./utils.js";
 
 /**
@@ -26,7 +26,7 @@ export function registerGetBudgetContextTool(server: McpServer): void {
     },
     async () => {
       try {
-        const context = budgetContext.getBudgetContext();
+        const context = budgetStore.getState().getBudgetContext();
         return successResult("Budget context retrieved from cache", context);
       } catch (error) {
         return errorResult(error);
@@ -63,8 +63,8 @@ export function registerSetActiveBudgetTool(server: McpServer): void {
     },
     async (args) => {
       try {
-        budgetContext.setActiveBudget(args.budgetId);
-        const context = budgetContext.getBudgetContext();
+        budgetStore.getState().setActiveBudget(args.budgetId);
+        const context = budgetStore.getState().getBudgetContext();
         return successResult(
           `Active budget set to: ${context.activeBudgetName}`,
           context,
@@ -97,8 +97,8 @@ export function registerRefreshBudgetContextTool(server: McpServer): void {
     },
     async () => {
       try {
-        await budgetContext.refreshCache();
-        const context = budgetContext.getBudgetContext();
+        await budgetStore.getState().refreshCache();
+        const context = budgetStore.getState().getBudgetContext();
         return successResult("Budget context refreshed from API", context);
       } catch (error) {
         return errorResult(error);
