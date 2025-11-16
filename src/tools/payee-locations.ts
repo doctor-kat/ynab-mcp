@@ -33,35 +33,6 @@ export function registerGetPayeeLocationsTool(server: McpServer): void {
   );
 }
 
-export function registerGetPayeeLocationByIdTool(server: McpServer): void {
-  const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
-    payeeLocationId: z
-      .string()
-      .min(1)
-      .describe("The ID of the payee location"),
-  });
-
-  server.registerTool(
-    "ynab.getPayeeLocationById",
-    {
-      title: "Get payee location by ID",
-      description: "Returns a single payee location",
-      inputSchema: schema.shape,
-    },
-    async (args) => {
-      try {
-        const response = await getPayeeLocationById(args);
-        return successResult(
-          `Payee location ${args.payeeLocationId} in budget ${args.budgetId}`,
-          response
-        );
-      } catch (error) {
-        return errorResult(error);
-      }
-    }
-  );
-}
 
 export function registerGetPayeeLocationsByPayeeTool(server: McpServer): void {
   const schema = z.object({

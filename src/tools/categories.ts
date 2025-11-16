@@ -41,33 +41,6 @@ export function registerGetCategoriesTool(server: McpServer): void {
   );
 }
 
-export function registerGetCategoryByIdTool(server: McpServer): void {
-  const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
-    categoryId: z.string().min(1).describe("The ID of the category"),
-  });
-
-  server.registerTool(
-    "ynab.getCategoryById",
-    {
-      title: "Get category by ID",
-      description:
-        "Returns a single category. Amounts are specific to the current budget month (UTC).",
-      inputSchema: schema.shape,
-    },
-    async (args) => {
-      try {
-        const response = await getCategoryById(args);
-        return successResult(
-          `Category ${args.categoryId} in budget ${args.budgetId}`,
-          response
-        );
-      } catch (error) {
-        return errorResult(error);
-      }
-    }
-  );
-}
 
 export function registerUpdateCategoryTool(server: McpServer): void {
   const schema = z.object({

@@ -31,32 +31,6 @@ export function registerGetPayeesTool(server: McpServer): void {
   );
 }
 
-export function registerGetPayeeByIdTool(server: McpServer): void {
-  const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
-    payeeId: z.string().min(1).describe("The ID of the payee"),
-  });
-
-  server.registerTool(
-    "ynab.getPayeeById",
-    {
-      title: "Get payee by ID",
-      description: "Returns a single payee",
-      inputSchema: schema.shape,
-    },
-    async (args) => {
-      try {
-        const response = await getPayeeById(args);
-        return successResult(
-          `Payee ${args.payeeId} in budget ${args.budgetId}`,
-          response
-        );
-      } catch (error) {
-        return errorResult(error);
-      }
-    }
-  );
-}
 
 export function registerUpdatePayeeTool(server: McpServer): void {
   const schema = z.object({

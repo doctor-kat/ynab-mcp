@@ -107,37 +107,6 @@ export function registerCreateScheduledTransactionTool(
   );
 }
 
-export function registerGetScheduledTransactionByIdTool(
-  server: McpServer
-): void {
-  const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
-    scheduledTransactionId: z
-      .string()
-      .min(1)
-      .describe("The ID of the scheduled transaction"),
-  });
-
-  server.registerTool(
-    "ynab.getScheduledTransactionById",
-    {
-      title: "Get scheduled transaction by ID",
-      description: "Returns a single scheduled transaction",
-      inputSchema: schema.shape,
-    },
-    async (args) => {
-      try {
-        const response = await getScheduledTransactionById(args);
-        return successResult(
-          `Scheduled transaction ${args.scheduledTransactionId} in budget ${args.budgetId}`,
-          response
-        );
-      } catch (error) {
-        return errorResult(error);
-      }
-    }
-  );
-}
 
 export function registerUpdateScheduledTransactionTool(
   server: McpServer

@@ -10,23 +10,19 @@ import {
 import {
   registerGetAccountsTool,
   registerCreateAccountTool,
-  registerGetAccountByIdTool,
 } from "./accounts.js";
 import {
   registerGetCategoriesTool,
-  registerGetCategoryByIdTool,
   registerUpdateCategoryTool,
   registerGetMonthCategoryByIdTool,
   registerUpdateMonthCategoryTool,
 } from "./categories.js";
 import {
   registerGetPayeesTool,
-  registerGetPayeeByIdTool,
   registerUpdatePayeeTool,
 } from "./payees.js";
 import {
   registerGetPayeeLocationsTool,
-  registerGetPayeeLocationByIdTool,
   registerGetPayeeLocationsByPayeeTool,
 } from "./payee-locations.js";
 import {
@@ -38,18 +34,11 @@ import {
   registerCreateTransactionTool,
   registerUpdateTransactionsTool,
   registerImportTransactionsTool,
-  registerGetTransactionByIdTool,
-  registerUpdateTransactionTool,
   registerDeleteTransactionTool,
-  registerGetTransactionsByAccountTool,
-  registerGetTransactionsByCategoryTool,
-  registerGetTransactionsByPayeeTool,
-  registerGetTransactionsByMonthTool,
 } from "./transactions.js";
 import {
   registerGetScheduledTransactionsTool,
   registerCreateScheduledTransactionTool,
-  registerGetScheduledTransactionByIdTool,
   registerUpdateScheduledTransactionTool,
   registerDeleteScheduledTransactionTool,
 } from "./scheduled-transactions.js";
@@ -74,49 +63,38 @@ export function registerTools({ server }: ToolRegistrationContext): void {
   registerGetBudgetByIdTool(server);
   registerGetBudgetSettingsByIdTool(server);
 
-  // Accounts (3 tools)
+  // Accounts (2 tools)
   registerGetAccountsTool(server);
   registerCreateAccountTool(server);
-  registerGetAccountByIdTool(server);
 
-  // Categories (5 tools)
+  // Categories (4 tools)
   registerGetCategoriesTool(server);
-  registerGetCategoryByIdTool(server);
   registerUpdateCategoryTool(server);
   registerGetMonthCategoryByIdTool(server);
   registerUpdateMonthCategoryTool(server);
 
-  // Payees (3 tools)
+  // Payees (2 tools)
   registerGetPayeesTool(server);
-  registerGetPayeeByIdTool(server);
   registerUpdatePayeeTool(server);
 
-  // Payee Locations (3 tools)
+  // Payee Locations (2 tools)
   registerGetPayeeLocationsTool(server);
-  registerGetPayeeLocationByIdTool(server);
   registerGetPayeeLocationsByPayeeTool(server);
 
   // Months (2 tools)
   registerGetBudgetMonthsTool(server);
   registerGetBudgetMonthTool(server);
 
-  // Transactions (11 tools)
-  registerGetTransactionsTool(server);
+  // Transactions (5 tools)
+  registerGetTransactionsTool(server); // Now supports accountId, categoryId, payeeId, month filters
   registerCreateTransactionTool(server);
   registerUpdateTransactionsTool(server);
   registerImportTransactionsTool(server);
-  registerGetTransactionByIdTool(server);
-  registerUpdateTransactionTool(server);
   registerDeleteTransactionTool(server);
-  registerGetTransactionsByAccountTool(server);
-  registerGetTransactionsByCategoryTool(server);
-  registerGetTransactionsByPayeeTool(server);
-  registerGetTransactionsByMonthTool(server);
 
-  // Scheduled Transactions (5 tools)
+  // Scheduled Transactions (4 tools)
   registerGetScheduledTransactionsTool(server);
   registerCreateScheduledTransactionTool(server);
-  registerGetScheduledTransactionByIdTool(server);
   registerUpdateScheduledTransactionTool(server);
   registerDeleteScheduledTransactionTool(server);
 

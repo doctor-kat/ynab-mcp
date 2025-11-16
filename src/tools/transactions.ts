@@ -18,6 +18,23 @@ import { successResult, errorResult, limitResults, getResultSizeWarning } from "
 export function registerGetTransactionsTool(server: McpServer): void {
   const schema = z.object({
     budgetId: z.string().min(1).describe("The ID of the budget"),
+    accountId: z
+      .string()
+      .optional()
+      .describe("Filter by account ID"),
+    categoryId: z
+      .string()
+      .optional()
+      .describe("Filter by category ID"),
+    payeeId: z
+      .string()
+      .optional()
+      .describe("Filter by payee ID"),
+    month: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional()
+      .describe("Filter by budget month (ISO format YYYY-MM-DD)"),
     sinceDate: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -49,16 +66,56 @@ export function registerGetTransactionsTool(server: McpServer): void {
     {
       title: "Get transactions",
       description:
-        "Returns budget transactions, excluding any pending transactions. ⚠️ Can return large payloads - use sinceDate and limit parameters to reduce context size for local LLMs.",
+        "Returns budget transactions with optional filters for account, category, payee, or month. Excludes pending transactions. ⚠️ Can return large payloads - use sinceDate and limit parameters to reduce context size for local LLMs.",
       inputSchema: schema.shape,
     },
     async (args: any) => {
       try {
-        const response = await getTransactions(args);
+        // Use specialized endpoint if specific filter is provided
+        let response: any;
+        if (args.accountId) {
+          response = await getTransactionsByAccount({
+            budgetId: args.budgetId,
+            accountId: args.accountId,
+            sinceDate: args.sinceDate,
+            type: args.type,
+            lastKnowledgeOfServer: args.lastKnowledgeOfServer,
+          });
+        } else if (args.categoryId) {
+          response = await getTransactionsByCategory({
+            budgetId: args.budgetId,
+            categoryId: args.categoryId,
+            sinceDate: args.sinceDate,
+            type: args.type,
+            lastKnowledgeOfServer: args.lastKnowledgeOfServer,
+          });
+        } else if (args.payeeId) {
+          response = await getTransactionsByPayee({
+            budgetId: args.budgetId,
+            payeeId: args.payeeId,
+            sinceDate: args.sinceDate,
+            type: args.type,
+            lastKnowledgeOfServer: args.lastKnowledgeOfServer,
+          });
+        } else if (args.month) {
+          response = await getTransactionsByMonth({
+            budgetId: args.budgetId,
+            month: args.month,
+            sinceDate: args.sinceDate,
+            type: args.type,
+          });
+        } else {
+          response = await getTransactions({
+            budgetId: args.budgetId,
+            sinceDate: args.sinceDate,
+            type: args.type,
+            lastKnowledgeOfServer: args.lastKnowledgeOfServer,
+          });
+        }
 
-        // Apply client-side limit if specified
+        // Apply client-side limit if specified (works with both TransactionDetail[] and HybridTransaction[])
         const { items, truncated, originalCount } = limitResults(
-          response.data.transactions,
+          response.data.transactions as any,
           args.limit
         );
 
@@ -81,8 +138,15 @@ export function registerGetTransactionsTool(server: McpServer): void {
           ? `${items.length}/${originalCount} transaction(s)`
           : `${items.length} transaction(s)`;
 
+        // Build context-specific message
+        let context = `budget ${args.budgetId}`;
+        if (args.accountId) context = `account ${args.accountId} in ${context}`;
+        if (args.categoryId) context = `category ${args.categoryId} in ${context}`;
+        if (args.payeeId) context = `payee ${args.payeeId} in ${context}`;
+        if (args.month) context = `month ${args.month} in ${context}`;
+
         const message = [
-          `Transactions for budget ${args.budgetId}: ${countDisplay}`,
+          `Transactions for ${context}: ${countDisplay}`,
           warning,
         ].filter(Boolean).join('\n');
 
@@ -239,104 +303,6 @@ export function registerImportTransactionsTool(server: McpServer): void {
   );
 }
 
-export function registerGetTransactionByIdTool(server: McpServer): void {
-  const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
-    transactionId: z.string().min(1).describe("The ID of the transaction"),
-  });
-
-  server.registerTool(
-    "ynab.getTransactionById",
-    {
-      title: "Get transaction by ID",
-      description: "Returns a single transaction",
-      inputSchema: schema.shape,
-    },
-    async (args) => {
-      try {
-        const response = await getTransactionById(args);
-        return successResult(
-          `Transaction ${args.transactionId} in budget ${args.budgetId}`,
-          response
-        );
-      } catch (error) {
-        return errorResult(error);
-      }
-    }
-  );
-}
-
-export function registerUpdateTransactionTool(server: McpServer): void {
-  const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
-    transactionId: z.string().min(1).describe("The ID of the transaction"),
-    transaction: z
-      .object({
-        account_id: z.string().optional().describe("Account ID"),
-        date: z.string().optional().describe("Transaction date (ISO format)"),
-        amount: z
-          .number()
-          .int()
-          .optional()
-          .describe("Transaction amount in milliunits"),
-        payee_id: z.string().optional().describe("Payee ID"),
-        payee_name: z.string().optional().describe("Payee name"),
-        category_id: z.string().optional().describe("Category ID"),
-        memo: z.string().optional().describe("Transaction memo"),
-        cleared: z
-          .enum(["cleared", "uncleared", "reconciled"])
-          .optional()
-          .describe("Cleared status"),
-        approved: z.boolean().optional().describe("Approved status"),
-        flag_color: z
-          .enum(["red", "orange", "yellow", "green", "blue", "purple", ""])
-          .optional()
-          .describe("Flag color"),
-        subtransactions: z
-          .array(
-            z
-              .object({
-                amount: z
-                  .number()
-                  .int()
-                  .describe("Subtransaction amount in milliunits"),
-                payee_id: z.string().optional().describe("Payee ID"),
-                payee_name: z.string().optional().describe("Payee name"),
-                category_id: z.string().optional().describe("Category ID"),
-                memo: z
-                  .string()
-                  .optional()
-                  .describe("Subtransaction memo"),
-              })
-              .passthrough()
-          )
-          .optional()
-          .describe("Subtransactions for split transactions"),
-      })
-      .passthrough()
-      .describe("Transaction update fields"),
-  });
-
-  server.registerTool(
-    "ynab.updateTransaction",
-    {
-      title: "Update transaction",
-      description: "Updates a single transaction",
-      inputSchema: schema.shape,
-    },
-    async (args) => {
-      try {
-        const response = await updateTransaction(args);
-        return successResult(
-          `Transaction ${args.transactionId} updated in budget ${args.budgetId}`,
-          response
-        );
-      } catch (error) {
-        return errorResult(error);
-      }
-    }
-  );
-}
 
 export function registerDeleteTransactionTool(server: McpServer): void {
   const schema = z.object({
@@ -365,319 +331,3 @@ export function registerDeleteTransactionTool(server: McpServer): void {
   );
 }
 
-export function registerGetTransactionsByAccountTool(server: McpServer): void {
-  const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
-    accountId: z.string().min(1).describe("The ID of the account"),
-    sinceDate: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .optional()
-      .describe(
-        "Only return transactions on or after this date (ISO format YYYY-MM-DD). Recommended to prevent large payloads."
-      ),
-    type: z
-      .enum(["uncategorized", "unapproved"])
-      .optional()
-      .describe("Filter by transaction type (helps reduce payload size)"),
-    lastKnowledgeOfServer: z
-      .number()
-      .int()
-      .optional()
-      .describe("Server knowledge timestamp for delta requests"),
-    limit: z
-      .number()
-      .int()
-      .positive()
-      .optional()
-      .describe(
-        "Maximum number of transactions to return (applied client-side). Useful for preventing context overflow with local LLMs."
-      ),
-  });
-
-  server.registerTool(
-    "ynab.getTransactionsByAccount",
-    {
-      title: "Get transactions by account",
-      description:
-        "Returns all transactions for a specified account, excluding any pending transactions. ⚠️ Can return large payloads - use sinceDate and limit parameters to reduce context size for local LLMs.",
-      inputSchema: schema.shape,
-    },
-    async (args: any) => {
-      try {
-        const response = await getTransactionsByAccount(args);
-
-        // Apply client-side limit if specified
-        const { items, truncated, originalCount } = limitResults(
-          response.data.transactions,
-          args.limit
-        );
-
-        const limitedResponse = {
-          ...response,
-          data: {
-            ...response.data,
-            transactions: items,
-          },
-        };
-
-        // Generate warning message for large result sets
-        const warning = getResultSizeWarning(
-          items.length,
-          truncated,
-          truncated ? originalCount : undefined
-        );
-
-        const countDisplay = truncated
-          ? `${items.length}/${originalCount} transaction(s)`
-          : `${items.length} transaction(s)`;
-
-        const message = [
-          `Transactions for account ${args.accountId} in budget ${args.budgetId}: ${countDisplay}`,
-          warning,
-        ].filter(Boolean).join('\n');
-
-        return successResult(message, limitedResponse);
-      } catch (error) {
-        return errorResult(error);
-      }
-    }
-  );
-}
-
-export function registerGetTransactionsByCategoryTool(
-  server: McpServer
-): void {
-  const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
-    categoryId: z.string().min(1).describe("The ID of the category"),
-    sinceDate: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .optional()
-      .describe(
-        "Only return transactions on or after this date (ISO format YYYY-MM-DD). Recommended to prevent large payloads."
-      ),
-    type: z
-      .enum(["uncategorized", "unapproved"])
-      .optional()
-      .describe("Filter by transaction type (helps reduce payload size)"),
-    lastKnowledgeOfServer: z
-      .number()
-      .int()
-      .optional()
-      .describe("Server knowledge timestamp for delta requests"),
-    limit: z
-      .number()
-      .int()
-      .positive()
-      .optional()
-      .describe(
-        "Maximum number of transactions to return (applied client-side). Useful for preventing context overflow with local LLMs."
-      ),
-  });
-
-  server.registerTool(
-    "ynab.getTransactionsByCategory",
-    {
-      title: "Get transactions by category",
-      description: "Returns all transactions for a specified category. ⚠️ Can return large payloads - use sinceDate and limit parameters to reduce context size for local LLMs.",
-      inputSchema: schema.shape,
-    },
-    async (args: any) => {
-      try {
-        const response = await getTransactionsByCategory(args);
-
-        // Apply client-side limit if specified
-        const { items, truncated, originalCount } = limitResults(
-          response.data.transactions,
-          args.limit
-        );
-
-        const limitedResponse = {
-          ...response,
-          data: {
-            ...response.data,
-            transactions: items,
-          },
-        };
-
-        // Generate warning message for large result sets
-        const warning = getResultSizeWarning(
-          items.length,
-          truncated,
-          truncated ? originalCount : undefined
-        );
-
-        const countDisplay = truncated
-          ? `${items.length}/${originalCount} transaction(s)`
-          : `${items.length} transaction(s)`;
-
-        const message = [
-          `Transactions for category ${args.categoryId} in budget ${args.budgetId}: ${countDisplay}`,
-          warning,
-        ].filter(Boolean).join('\n');
-
-        return successResult(message, limitedResponse);
-      } catch (error) {
-        return errorResult(error);
-      }
-    }
-  );
-}
-
-export function registerGetTransactionsByPayeeTool(server: McpServer): void {
-  const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
-    payeeId: z.string().min(1).describe("The ID of the payee"),
-    sinceDate: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .optional()
-      .describe(
-        "Only return transactions on or after this date (ISO format YYYY-MM-DD). Recommended to prevent large payloads."
-      ),
-    type: z
-      .enum(["uncategorized", "unapproved"])
-      .optional()
-      .describe("Filter by transaction type (helps reduce payload size)"),
-    lastKnowledgeOfServer: z
-      .number()
-      .int()
-      .optional()
-      .describe("Server knowledge timestamp for delta requests"),
-    limit: z
-      .number()
-      .int()
-      .positive()
-      .optional()
-      .describe(
-        "Maximum number of transactions to return (applied client-side). Useful for preventing context overflow with local LLMs."
-      ),
-  });
-
-  server.registerTool(
-    "ynab.getTransactionsByPayee",
-    {
-      title: "Get transactions by payee",
-      description: "Returns all transactions for a specified payee. ⚠️ Can return large payloads - use sinceDate and limit parameters to reduce context size for local LLMs.",
-      inputSchema: schema.shape,
-    },
-    async (args: any) => {
-      try {
-        const response = await getTransactionsByPayee(args);
-
-        // Apply client-side limit if specified
-        const { items, truncated, originalCount } = limitResults(
-          response.data.transactions,
-          args.limit
-        );
-
-        const limitedResponse = {
-          ...response,
-          data: {
-            ...response.data,
-            transactions: items,
-          },
-        };
-
-        // Generate warning message for large result sets
-        const warning = getResultSizeWarning(
-          items.length,
-          truncated,
-          truncated ? originalCount : undefined
-        );
-
-        const countDisplay = truncated
-          ? `${items.length}/${originalCount} transaction(s)`
-          : `${items.length} transaction(s)`;
-
-        const message = [
-          `Transactions for payee ${args.payeeId} in budget ${args.budgetId}: ${countDisplay}`,
-          warning,
-        ].filter(Boolean).join('\n');
-
-        return successResult(message, limitedResponse);
-      } catch (error) {
-        return errorResult(error);
-      }
-    }
-  );
-}
-
-export function registerGetTransactionsByMonthTool(server: McpServer): void {
-  const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
-    month: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .describe("The budget month in ISO format (YYYY-MM-DD)"),
-    sinceDate: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .optional()
-      .describe(
-        "Only return transactions on or after this date (ISO format YYYY-MM-DD). Recommended to prevent large payloads."
-      ),
-    type: z
-      .enum(["uncategorized", "unapproved"])
-      .optional()
-      .describe("Filter by transaction type (helps reduce payload size)"),
-    limit: z
-      .number()
-      .int()
-      .positive()
-      .optional()
-      .describe(
-        "Maximum number of transactions to return (applied client-side). Useful for preventing context overflow with local LLMs."
-      ),
-  });
-
-  server.registerTool(
-    "ynab.getTransactionsByMonth",
-    {
-      title: "Get transactions by month",
-      description: "Returns all transactions for a specified month. ⚠️ Can return large payloads for busy months - use sinceDate and limit parameters to reduce context size for local LLMs.",
-      inputSchema: schema.shape,
-    },
-    async (args: any) => {
-      try {
-        const response = await getTransactionsByMonth(args);
-
-        // Apply client-side limit if specified
-        const { items, truncated, originalCount } = limitResults(
-          response.data.transactions,
-          args.limit
-        );
-
-        const limitedResponse = {
-          ...response,
-          data: {
-            ...response.data,
-            transactions: items,
-          },
-        };
-
-        // Generate warning message for large result sets
-        const warning = getResultSizeWarning(
-          items.length,
-          truncated,
-          truncated ? originalCount : undefined
-        );
-
-        const countDisplay = truncated
-          ? `${items.length}/${originalCount} transaction(s)`
-          : `${items.length} transaction(s)`;
-
-        const message = [
-          `Transactions for month ${args.month} in budget ${args.budgetId}: ${countDisplay}`,
-          warning,
-        ].filter(Boolean).join('\n');
-
-        return successResult(message, limitedResponse);
-      } catch (error) {
-        return errorResult(error);
-      }
-    }
-  );
-}

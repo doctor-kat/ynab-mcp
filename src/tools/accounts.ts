@@ -84,29 +84,3 @@ export function registerCreateAccountTool(server: McpServer): void {
   );
 }
 
-export function registerGetAccountByIdTool(server: McpServer): void {
-  const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
-    accountId: z.string().min(1).describe("The ID of the account"),
-  });
-
-  server.registerTool(
-    "ynab.getAccountById",
-    {
-      title: "Get account by ID",
-      description: "Returns a single account",
-      inputSchema: schema.shape,
-    },
-    async (args) => {
-      try {
-        const response = await getAccountById(args);
-        return successResult(
-          `Account ${args.accountId} in budget ${args.budgetId}`,
-          response
-        );
-      } catch (error) {
-        return errorResult(error);
-      }
-    }
-  );
-}
