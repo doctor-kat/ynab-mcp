@@ -1,0 +1,90 @@
+import { z } from "zod";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import {
+  getBudgets,
+  getBudgetById,
+  getBudgetSettingsById,
+} from "../api/index.js";
+import { successResult, errorResult } from "./utils.js";
+
+export function registerGetBudgetsTool(server: McpServer): void {
+  const schema = z.object({
+    includeAccounts: z
+      .boolean()
+      .optional()
+      .describe("Include accounts for each budget"),
+  });
+
+  server.registerTool(
+    "ynab.getBudgets",
+    {
+      title: "Get budgets",
+      description:
+        "Lists budgets with summaries. Can optionally include account details.",
+      inputSchema: schema.shape,
+    },
+    async (args) => {
+      try {
+        const response = await getBudgets(args);
+        return successResult("Budgets retrieved", response);
+      } catch (error) {
+        return errorResult(error);
+      }
+    }
+  );
+}
+
+export function registerGetBudgetByIdTool(server: McpServer): void {
+  const schema = z.object({
+    budgetId: z.string().min(1).describe("The ID of the budget"),
+    lastKnowledgeOfServer: z
+      .number()
+      .int()
+      .optional()
+      .describe("Server knowledge timestamp for delta requests"),
+  });
+
+  server.registerTool(
+    "ynab.getBudgetById",
+    {
+      title: "Get budget by ID",
+      description:
+        "Retrieves a single budget with all related entities. This is effectively a full budget export.",
+      inputSchema: schema.shape,
+    },
+    async (args) => {
+      try {
+        const response = await getBudgetById(args);
+        return successResult(`Budget ${args.budgetId} retrieved`, response);
+      } catch (error) {
+        return errorResult(error);
+      }
+    }
+  );
+}
+
+export function registerGetBudgetSettingsByIdTool(server: McpServer): void {
+  const schema = z.object({
+    budgetId: z.string().min(1).describe("The ID of the budget"),
+  });
+
+  server.registerTool(
+    "ynab.getBudgetSettingsById",
+    {
+      title: "Get budget settings by ID",
+      description: "Returns settings for a specific budget",
+      inputSchema: schema.shape,
+    },
+    async (args) => {
+      try {
+        const response = await getBudgetSettingsById(args);
+        return successResult(
+          `Budget ${args.budgetId} settings retrieved`,
+          response
+        );
+      } catch (error) {
+        return errorResult(error);
+      }
+    }
+  );
+}
