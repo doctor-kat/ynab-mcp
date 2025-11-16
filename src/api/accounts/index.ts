@@ -1,14 +1,11 @@
-import type {
-  AccountsResponse,
-  AccountResponse,
-} from "./Account.js";
+import type { AccountResponse, AccountsResponse } from "./Account.js";
 import type { PostAccountWrapper } from "./SaveAccount.js";
 import { makeRequest } from "../client.js";
 
-export * from './Account.js';
-export * from './AccountType.js';
-export * from './LoanAccountPeriodicValue.js';
-export * from './SaveAccount.js';
+export * from "./Account.js";
+export * from "./AccountType.js";
+export * from "./LoanAccountPeriodicValue.js";
+export * from "./SaveAccount.js";
 
 /**
  * Returns all accounts

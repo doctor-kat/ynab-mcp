@@ -3,9 +3,9 @@ import type { BudgetDetailResponse } from "./BudgetDetail.js";
 import type { BudgetSettingsResponse } from "./BudgetSettings.js";
 import { makeRequest } from "../client.js";
 
-export * from './BudgetSummary.js';
-export * from './BudgetDetail.js';
-export * from './BudgetSettings.js';
+export * from "./BudgetSummary.js";
+export * from "./BudgetDetail.js";
+export * from "./BudgetSettings.js";
 
 /**
  * Returns budgets list with summary information

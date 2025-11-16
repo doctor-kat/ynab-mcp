@@ -1,10 +1,10 @@
 import type {
-  PayeeLocationsResponse,
   PayeeLocationResponse,
+  PayeeLocationsResponse,
 } from "./PayeeLocation.js";
 import { makeRequest } from "../client.js";
 
-export * from './PayeeLocation.js';
+export * from "./PayeeLocation.js";
 
 /**
  * Returns all payee locations

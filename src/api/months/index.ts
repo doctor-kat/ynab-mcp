@@ -2,8 +2,8 @@ import type { MonthSummariesResponse } from "./MonthSummary.js";
 import type { MonthDetailResponse } from "./MonthDetail.js";
 import { makeRequest } from "../client.js";
 
-export * from './MonthSummary.js';
-export * from './MonthDetail.js';
+export * from "./MonthSummary.js";
+export * from "./MonthDetail.js";
 
 /**
  * Returns all budget months

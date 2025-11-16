@@ -3,51 +3,48 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 // Import all register functions
 import { registerGetUserTool } from "./user.js";
 import {
-  registerGetBudgetsTool,
   registerGetBudgetByIdTool,
   registerGetBudgetSettingsByIdTool,
+  registerGetBudgetsTool,
 } from "./budgets.js";
 import {
-  registerGetAccountsTool,
   registerCreateAccountTool,
+  registerGetAccountsTool,
 } from "./accounts.js";
 import {
   registerGetCategoriesTool,
-  registerUpdateCategoryTool,
   registerGetMonthCategoryByIdTool,
+  registerUpdateCategoryTool,
   registerUpdateMonthCategoryTool,
 } from "./categories.js";
+import { registerGetPayeesTool, registerUpdatePayeeTool } from "./payees.js";
 import {
-  registerGetPayeesTool,
-  registerUpdatePayeeTool,
-} from "./payees.js";
-import {
-  registerGetPayeeLocationsTool,
   registerGetPayeeLocationsByPayeeTool,
+  registerGetPayeeLocationsTool,
 } from "./payee-locations.js";
 import {
   registerGetBudgetMonthsTool,
   registerGetBudgetMonthTool,
 } from "./months.js";
 import {
-  registerGetTransactionsTool,
   registerCreateTransactionTool,
-  registerUpdateTransactionsTool,
-  registerImportTransactionsTool,
   registerDeleteTransactionTool,
+  registerGetTransactionsTool,
+  registerImportTransactionsTool,
+  registerUpdateTransactionsTool,
 } from "./transactions.js";
 import {
-  registerGetScheduledTransactionsTool,
   registerCreateScheduledTransactionTool,
-  registerUpdateScheduledTransactionTool,
   registerDeleteScheduledTransactionTool,
+  registerGetScheduledTransactionsTool,
+  registerUpdateScheduledTransactionTool,
 } from "./scheduled-transactions.js";
 import {
-  registerStageCategorizationTool,
-  registerStageSplitTool,
-  registerReviewChangesTool,
   registerApplyChangesTool,
   registerClearChangesTool,
+  registerReviewChangesTool,
+  registerStageCategorizationTool,
+  registerStageSplitTool,
 } from "./staging-tools.js";
 
 export interface ToolRegistrationContext {

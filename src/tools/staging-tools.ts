@@ -7,7 +7,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { stagedChanges } from "../staging/staged-changes.js";
 import { ChangeType } from "../staging/types.js";
 import { getTransactionById, updateTransactions } from "../api/index.js";
-import { successResult, errorResult } from "./utils.js";
+import { errorResult, successResult } from "./utils.js";
 import type { SaveSubTransaction } from "../api/transactions/SaveSubTransaction.js";
 
 /**
@@ -75,12 +75,12 @@ export function registerStageCategorizationTool(server: McpServer): void {
                 ? { from: transaction.memo, to: args.memo }
                 : undefined,
             },
-          }
+          },
         );
       } catch (error) {
         return errorResult(error);
       }
-    }
+    },
   );
 }
 
@@ -102,7 +102,7 @@ export function registerStageSplitTool(server: McpServer): void {
           payee_name: z.string().optional().describe("Payee name"),
           category_id: z.string().optional().describe("Category ID"),
           memo: z.string().optional().describe("Memo"),
-        })
+        }),
       )
       .min(2)
       .describe("Array of subtransactions (must sum to total amount)"),
@@ -133,13 +133,13 @@ export function registerStageSplitTool(server: McpServer): void {
         // Validate subtransactions sum
         const total = args.subtransactions.reduce(
           (sum, sub) => sum + sub.amount,
-          0
+          0,
         );
         if (total !== transaction.amount) {
           return errorResult(
             new Error(
-              `Subtransactions sum (${total}) must equal transaction amount (${transaction.amount})`
-            )
+              `Subtransactions sum (${total}) must equal transaction amount (${transaction.amount})`,
+            ),
           );
         }
 
@@ -153,7 +153,8 @@ export function registerStageSplitTool(server: McpServer): void {
             `Split transaction into ${args.subtransactions.length} parts`,
           originalTransaction: {
             category_id: transaction.category_id,
-            subtransactions: transaction.subtransactions as SaveSubTransaction[],
+            subtransactions:
+              transaction.subtransactions as SaveSubTransaction[],
           },
           proposedChanges: {
             subtransactions: args.subtransactions,
@@ -168,12 +169,12 @@ export function registerStageSplitTool(server: McpServer): void {
             totalAmount: transaction.amount,
             subtransactionCount: args.subtransactions.length,
             subtransactions: args.subtransactions,
-          }
+          },
         );
       } catch (error) {
         return errorResult(error);
       }
-    }
+    },
   );
 }
 
@@ -203,7 +204,7 @@ export function registerReviewChangesTool(server: McpServer): void {
         // Filter by transaction if specified
         if (args.transactionId) {
           changes = changes.filter(
-            (c) => c.transactionId === args.transactionId
+            (c) => c.transactionId === args.transactionId,
           );
         }
 
@@ -228,7 +229,7 @@ export function registerReviewChangesTool(server: McpServer): void {
         const summary = changes
           .map(
             (c, i) =>
-              `${i + 1}. [${c.type}] ${c.description} (change ID: ${c.id})`
+              `${i + 1}. [${c.type}] ${c.description} (change ID: ${c.id})`,
           )
           .join("\n");
 
@@ -237,12 +238,12 @@ export function registerReviewChangesTool(server: McpServer): void {
           {
             count: changes.length,
             changes: changeDetails,
-          }
+          },
         );
       } catch (error) {
         return errorResult(error);
       }
-    }
+    },
   );
 }
 
@@ -255,7 +256,7 @@ export function registerApplyChangesTool(server: McpServer): void {
       .array(z.string())
       .optional()
       .describe(
-        "Optional: specific change IDs to apply (if omitted, applies all staged changes)"
+        "Optional: specific change IDs to apply (if omitted, applies all staged changes)",
       ),
   });
 
@@ -274,7 +275,7 @@ export function registerApplyChangesTool(server: McpServer): void {
         // Filter by specific IDs if provided
         if (args.changeIds && args.changeIds.length > 0) {
           changesToApply = changesToApply.filter((c) =>
-            args.changeIds!.includes(c.id)
+            args.changeIds!.includes(c.id),
           );
         }
 
@@ -345,7 +346,7 @@ export function registerApplyChangesTool(server: McpServer): void {
       } catch (error) {
         return errorResult(error);
       }
-    }
+    },
   );
 }
 
@@ -358,7 +359,7 @@ export function registerClearChangesTool(server: McpServer): void {
       .array(z.string())
       .optional()
       .describe(
-        "Optional: specific change IDs to clear (if omitted, clears all staged changes)"
+        "Optional: specific change IDs to clear (if omitted, clears all staged changes)",
       ),
   });
 
@@ -393,6 +394,6 @@ export function registerClearChangesTool(server: McpServer): void {
       } catch (error) {
         return errorResult(error);
       }
-    }
+    },
   );
 }

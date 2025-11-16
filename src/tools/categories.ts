@@ -2,12 +2,11 @@ import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
   getCategories,
-  getCategoryById,
-  updateCategory,
   getMonthCategoryById,
+  updateCategory,
   updateMonthCategory,
 } from "../api/index.js";
-import { successResult, errorResult } from "./utils.js";
+import { errorResult, successResult } from "./utils.js";
 
 export function registerGetCategoriesTool(server: McpServer): void {
   const schema = z.object({
@@ -32,15 +31,14 @@ export function registerGetCategoriesTool(server: McpServer): void {
         const response = await getCategories(args);
         return successResult(
           `Categories for budget ${args.budgetId}`,
-          response
+          response,
         );
       } catch (error) {
         return errorResult(error);
       }
-    }
+    },
   );
 }
-
 
 export function registerUpdateCategoryTool(server: McpServer): void {
   const schema = z.object({
@@ -91,12 +89,12 @@ export function registerUpdateCategoryTool(server: McpServer): void {
         const response = await updateCategory(args);
         return successResult(
           `Category ${args.categoryId} updated in budget ${args.budgetId}`,
-          response
+          response,
         );
       } catch (error) {
         return errorResult(error);
       }
-    }
+    },
   );
 }
 
@@ -123,12 +121,12 @@ export function registerGetMonthCategoryByIdTool(server: McpServer): void {
         const response = await getMonthCategoryById(args);
         return successResult(
           `Category ${args.categoryId} for month ${args.month} in budget ${args.budgetId}`,
-          response
+          response,
         );
       } catch (error) {
         return errorResult(error);
       }
-    }
+    },
   );
 }
 
@@ -142,10 +140,7 @@ export function registerUpdateMonthCategoryTool(server: McpServer): void {
     categoryId: z.string().min(1).describe("The ID of the category"),
     category: z
       .object({
-        budgeted: z
-          .number()
-          .int()
-          .describe("Budgeted amount in milliunits"),
+        budgeted: z.number().int().describe("Budgeted amount in milliunits"),
       })
       .passthrough()
       .describe("Category update fields"),
@@ -164,11 +159,11 @@ export function registerUpdateMonthCategoryTool(server: McpServer): void {
         const response = await updateMonthCategory(args);
         return successResult(
           `Category ${args.categoryId} updated for month ${args.month} in budget ${args.budgetId}`,
-          response
+          response,
         );
       } catch (error) {
         return errorResult(error);
       }
-    }
+    },
   );
 }

@@ -1,11 +1,11 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
-  getBudgets,
   getBudgetById,
+  getBudgets,
   getBudgetSettingsById,
 } from "../api/index.js";
-import { successResult, errorResult } from "./utils.js";
+import { errorResult, successResult } from "./utils.js";
 
 export function registerGetBudgetsTool(server: McpServer): void {
   const schema = z.object({
@@ -30,7 +30,7 @@ export function registerGetBudgetsTool(server: McpServer): void {
       } catch (error) {
         return errorResult(error);
       }
-    }
+    },
   );
 }
 
@@ -59,7 +59,7 @@ export function registerGetBudgetByIdTool(server: McpServer): void {
       } catch (error) {
         return errorResult(error);
       }
-    }
+    },
   );
 }
 
@@ -80,11 +80,11 @@ export function registerGetBudgetSettingsByIdTool(server: McpServer): void {
         const response = await getBudgetSettingsById(args);
         return successResult(
           `Budget ${args.budgetId} settings retrieved`,
-          response
+          response,
         );
       } catch (error) {
         return errorResult(error);
       }
-    }
+    },
   );
 }

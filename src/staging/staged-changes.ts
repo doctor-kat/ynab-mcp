@@ -3,11 +3,7 @@
  */
 
 import { randomUUID } from "crypto";
-import type {
-  StagedChange,
-  SessionState,
-  ChangeType,
-} from "./types.js";
+import type { SessionState, StagedChange } from "./types.js";
 
 /**
  * Singleton staged changes tracker
@@ -62,15 +58,13 @@ class StagedChangesTracker {
    */
   getStagedChangesForTransaction(
     budgetId: string,
-    transactionId: string
+    transactionId: string,
   ): StagedChange[] {
     return this.getStagedChanges().filter(
       (change) =>
-        change.budgetId === budgetId &&
-        change.transactionId === transactionId
+        change.budgetId === budgetId && change.transactionId === transactionId,
     );
   }
-
 
   /**
    * Clear all staged changes

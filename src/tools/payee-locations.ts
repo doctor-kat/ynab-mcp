@@ -1,11 +1,7 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import {
-  getPayeeLocations,
-  getPayeeLocationById,
-  getPayeeLocationsByPayee,
-} from "../api/index.js";
-import { successResult, errorResult } from "./utils.js";
+import { getPayeeLocations, getPayeeLocationsByPayee } from "../api/index.js";
+import { errorResult, successResult } from "./utils.js";
 
 export function registerGetPayeeLocationsTool(server: McpServer): void {
   const schema = z.object({
@@ -24,15 +20,14 @@ export function registerGetPayeeLocationsTool(server: McpServer): void {
         const response = await getPayeeLocations(args);
         return successResult(
           `Payee locations for budget ${args.budgetId}`,
-          response
+          response,
         );
       } catch (error) {
         return errorResult(error);
       }
-    }
+    },
   );
 }
-
 
 export function registerGetPayeeLocationsByPayeeTool(server: McpServer): void {
   const schema = z.object({
@@ -52,11 +47,11 @@ export function registerGetPayeeLocationsByPayeeTool(server: McpServer): void {
         const response = await getPayeeLocationsByPayee(args);
         return successResult(
           `Payee locations for payee ${args.payeeId} in budget ${args.budgetId}`,
-          response
+          response,
         );
       } catch (error) {
         return errorResult(error);
       }
-    }
+    },
   );
 }

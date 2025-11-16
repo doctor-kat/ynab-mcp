@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { getPayees, getPayeeById, updatePayee } from "../api/index.js";
-import { successResult, errorResult } from "./utils.js";
+import { getPayees, updatePayee } from "../api/index.js";
+import { errorResult, successResult } from "./utils.js";
 
 export function registerGetPayeesTool(server: McpServer): void {
   const schema = z.object({
@@ -27,10 +27,9 @@ export function registerGetPayeesTool(server: McpServer): void {
       } catch (error) {
         return errorResult(error);
       }
-    }
+    },
   );
 }
-
 
 export function registerUpdatePayeeTool(server: McpServer): void {
   const schema = z.object({
@@ -56,11 +55,11 @@ export function registerUpdatePayeeTool(server: McpServer): void {
         const response = await updatePayee(args);
         return successResult(
           `Payee ${args.payeeId} updated in budget ${args.budgetId}`,
-          response
+          response,
         );
       } catch (error) {
         return errorResult(error);
       }
-    }
+    },
   );
 }

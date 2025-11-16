@@ -1,13 +1,12 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
-  getScheduledTransactions,
   createScheduledTransaction,
-  getScheduledTransactionById,
-  updateScheduledTransaction,
   deleteScheduledTransaction,
+  getScheduledTransactions,
+  updateScheduledTransaction,
 } from "../api/index.js";
-import { successResult, errorResult } from "./utils.js";
+import { errorResult, successResult } from "./utils.js";
 
 export function registerGetScheduledTransactionsTool(server: McpServer): void {
   const schema = z.object({
@@ -31,26 +30,24 @@ export function registerGetScheduledTransactionsTool(server: McpServer): void {
         const response = await getScheduledTransactions(args);
         return successResult(
           `Scheduled transactions for budget ${args.budgetId}`,
-          response
+          response,
         );
       } catch (error) {
         return errorResult(error);
       }
-    }
+    },
   );
 }
 
 export function registerCreateScheduledTransactionTool(
-  server: McpServer
+  server: McpServer,
 ): void {
   const schema = z.object({
     budgetId: z.string().min(1).describe("The ID of the budget"),
     scheduledTransaction: z
       .object({
         account_id: z.string().describe("Account ID"),
-        date_first: z
-          .string()
-          .describe("First occurrence date (ISO format)"),
+        date_first: z.string().describe("First occurrence date (ISO format)"),
         date_next: z.string().describe("Next occurrence date (ISO format)"),
         frequency: z
           .enum([
@@ -69,10 +66,7 @@ export function registerCreateScheduledTransactionTool(
             "everyOtherYear",
           ])
           .describe("Frequency of scheduled transaction"),
-        amount: z
-          .number()
-          .int()
-          .describe("Transaction amount in milliunits"),
+        amount: z.number().int().describe("Transaction amount in milliunits"),
         payee_id: z.string().optional().describe("Payee ID"),
         category_id: z.string().optional().describe("Category ID"),
         memo: z.string().optional().describe("Transaction memo"),
@@ -98,18 +92,17 @@ export function registerCreateScheduledTransactionTool(
         const response = await createScheduledTransaction(args);
         return successResult(
           `Scheduled transaction created in budget ${args.budgetId}`,
-          response
+          response,
         );
       } catch (error) {
         return errorResult(error);
       }
-    }
+    },
   );
 }
 
-
 export function registerUpdateScheduledTransactionTool(
-  server: McpServer
+  server: McpServer,
 ): void {
   const schema = z.object({
     budgetId: z.string().min(1).describe("The ID of the budget"),
@@ -175,17 +168,17 @@ export function registerUpdateScheduledTransactionTool(
         const response = await updateScheduledTransaction(args);
         return successResult(
           `Scheduled transaction ${args.scheduledTransactionId} updated in budget ${args.budgetId}`,
-          response
+          response,
         );
       } catch (error) {
         return errorResult(error);
       }
-    }
+    },
   );
 }
 
 export function registerDeleteScheduledTransactionTool(
-  server: McpServer
+  server: McpServer,
 ): void {
   const schema = z.object({
     budgetId: z.string().min(1).describe("The ID of the budget"),
@@ -207,11 +200,11 @@ export function registerDeleteScheduledTransactionTool(
         const response = await deleteScheduledTransaction(args);
         return successResult(
           `Scheduled transaction ${args.scheduledTransactionId} deleted from budget ${args.budgetId}`,
-          response
+          response,
         );
       } catch (error) {
         return errorResult(error);
       }
-    }
+    },
   );
 }

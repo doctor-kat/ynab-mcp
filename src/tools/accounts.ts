@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { getAccounts, createAccount, getAccountById } from "../api/index.js";
-import { successResult, errorResult } from "./utils.js";
+import { createAccount, getAccounts } from "../api/index.js";
+import { errorResult, successResult } from "./utils.js";
 
 export function registerGetAccountsTool(server: McpServer): void {
   const schema = z.object({
@@ -27,7 +27,7 @@ export function registerGetAccountsTool(server: McpServer): void {
       } catch (error) {
         return errorResult(error);
       }
-    }
+    },
   );
 }
 
@@ -75,12 +75,11 @@ export function registerCreateAccountTool(server: McpServer): void {
         const response = await createAccount(args);
         return successResult(
           `Account created in budget ${args.budgetId}`,
-          response
+          response,
         );
       } catch (error) {
         return errorResult(error);
       }
-    }
+    },
   );
 }
-

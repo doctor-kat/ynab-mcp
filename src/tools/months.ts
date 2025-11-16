@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { getBudgetMonths, getBudgetMonth } from "../api/index.js";
-import { successResult, errorResult } from "./utils.js";
+import { getBudgetMonth, getBudgetMonths } from "../api/index.js";
+import { errorResult, successResult } from "./utils.js";
 
 export function registerGetBudgetMonthsTool(server: McpServer): void {
   const schema = z.object({
@@ -25,12 +25,12 @@ export function registerGetBudgetMonthsTool(server: McpServer): void {
         const response = await getBudgetMonths(args);
         return successResult(
           `Budget months for budget ${args.budgetId}`,
-          response
+          response,
         );
       } catch (error) {
         return errorResult(error);
       }
-    }
+    },
   );
 }
 
@@ -55,11 +55,11 @@ export function registerGetBudgetMonthTool(server: McpServer): void {
         const response = await getBudgetMonth(args);
         return successResult(
           `Budget month ${args.month} for budget ${args.budgetId}`,
-          response
+          response,
         );
       } catch (error) {
         return errorResult(error);
       }
-    }
+    },
   );
 }

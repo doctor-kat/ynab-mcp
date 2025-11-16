@@ -1,12 +1,9 @@
-import type {
-  PayeesResponse,
-  PayeeResponse,
-} from "./Payee.js";
-import type { SavePayeeResponse, PatchPayeeWrapper } from "./SavePayee.js";
+import type { PayeeResponse, PayeesResponse } from "./Payee.js";
+import type { PatchPayeeWrapper, SavePayeeResponse } from "./SavePayee.js";
 import { makeRequest } from "../client.js";
 
-export * from './Payee.js';
-export * from './SavePayee.js';
+export * from "./Payee.js";
+export * from "./SavePayee.js";
 
 /**
  * Returns all payees

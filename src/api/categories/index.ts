@@ -1,14 +1,17 @@
 import type { CategoryResponse } from "./Category.js";
 import type { CategoriesResponse } from "./CategoryGroupWithCategories.js";
-import type { SaveCategoryResponse, PatchCategoryWrapper } from "./SaveCategory.js";
+import type {
+  PatchCategoryWrapper,
+  SaveCategoryResponse,
+} from "./SaveCategory.js";
 import type { PatchMonthCategoryWrapper } from "./SaveMonthCategory.js";
 import { makeRequest } from "../client.js";
 
-export * from './Category.js';
-export * from './CategoryGroup.js';
-export * from './CategoryGroupWithCategories.js';
-export * from './SaveCategory.js';
-export * from './SaveMonthCategory.js';
+export * from "./Category.js";
+export * from "./CategoryGroup.js";
+export * from "./CategoryGroupWithCategories.js";
+export * from "./SaveCategory.js";
+export * from "./SaveMonthCategory.js";
 
 /**
  * Returns all categories grouped by category group. Amounts (budgeted,

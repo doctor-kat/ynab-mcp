@@ -1,35 +1,29 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
-  getTransactions,
   createTransaction,
-  updateTransactions,
-  importTransactions,
-  getTransactionById,
-  updateTransaction,
   deleteTransaction,
+  getTransactions,
   getTransactionsByAccount,
   getTransactionsByCategory,
-  getTransactionsByPayee,
   getTransactionsByMonth,
+  getTransactionsByPayee,
+  importTransactions,
+  updateTransactions,
 } from "../api/index.js";
-import { successResult, errorResult, limitResults, getResultSizeWarning } from "./utils.js";
+import {
+  errorResult,
+  getResultSizeWarning,
+  limitResults,
+  successResult,
+} from "./utils.js";
 
 export function registerGetTransactionsTool(server: McpServer): void {
   const schema = z.object({
     budgetId: z.string().min(1).describe("The ID of the budget"),
-    accountId: z
-      .string()
-      .optional()
-      .describe("Filter by account ID"),
-    categoryId: z
-      .string()
-      .optional()
-      .describe("Filter by category ID"),
-    payeeId: z
-      .string()
-      .optional()
-      .describe("Filter by payee ID"),
+    accountId: z.string().optional().describe("Filter by account ID"),
+    categoryId: z.string().optional().describe("Filter by category ID"),
+    payeeId: z.string().optional().describe("Filter by payee ID"),
     month: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -40,7 +34,7 @@ export function registerGetTransactionsTool(server: McpServer): void {
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional()
       .describe(
-        "Only return transactions on or after this date (ISO format YYYY-MM-DD). Recommended to prevent large payloads."
+        "Only return transactions on or after this date (ISO format YYYY-MM-DD). Recommended to prevent large payloads.",
       ),
     type: z
       .enum(["uncategorized", "unapproved"])
@@ -57,7 +51,7 @@ export function registerGetTransactionsTool(server: McpServer): void {
       .positive()
       .optional()
       .describe(
-        "Maximum number of transactions to return (applied client-side). Useful for preventing context overflow with local LLMs."
+        "Maximum number of transactions to return (applied client-side). Useful for preventing context overflow with local LLMs.",
       ),
   });
 
@@ -116,7 +110,7 @@ export function registerGetTransactionsTool(server: McpServer): void {
         // Apply client-side limit if specified (works with both TransactionDetail[] and HybridTransaction[])
         const { items, truncated, originalCount } = limitResults(
           response.data.transactions as any,
-          args.limit
+          args.limit,
         );
 
         const limitedResponse = {
@@ -131,7 +125,7 @@ export function registerGetTransactionsTool(server: McpServer): void {
         const warning = getResultSizeWarning(
           items.length,
           truncated,
-          truncated ? originalCount : undefined
+          truncated ? originalCount : undefined,
         );
 
         const countDisplay = truncated
@@ -141,20 +135,23 @@ export function registerGetTransactionsTool(server: McpServer): void {
         // Build context-specific message
         let context = `budget ${args.budgetId}`;
         if (args.accountId) context = `account ${args.accountId} in ${context}`;
-        if (args.categoryId) context = `category ${args.categoryId} in ${context}`;
+        if (args.categoryId)
+          context = `category ${args.categoryId} in ${context}`;
         if (args.payeeId) context = `payee ${args.payeeId} in ${context}`;
         if (args.month) context = `month ${args.month} in ${context}`;
 
         const message = [
           `Transactions for ${context}: ${countDisplay}`,
           warning,
-        ].filter(Boolean).join('\n');
+        ]
+          .filter(Boolean)
+          .join("\n");
 
         return successResult(message, limitedResponse);
       } catch (error) {
         return errorResult(error);
       }
-    }
+    },
   );
 }
 
@@ -176,10 +173,7 @@ export function registerCreateTransactionTool(server: McpServer): void {
       .enum(["red", "orange", "yellow", "green", "blue", "purple", ""])
       .optional()
       .describe("Flag color"),
-    import_id: z
-      .string()
-      .optional()
-      .describe("Import ID for deduplication"),
+    import_id: z.string().optional().describe("Import ID for deduplication"),
   });
 
   const schema = z.object({
@@ -208,12 +202,12 @@ export function registerCreateTransactionTool(server: McpServer): void {
         const response = await createTransaction(args);
         return successResult(
           `Transaction(s) created in budget ${args.budgetId}`,
-          response
+          response,
         );
       } catch (error) {
         return errorResult(error);
       }
-    }
+    },
   );
 }
 
@@ -249,7 +243,7 @@ export function registerUpdateTransactionsTool(server: McpServer): void {
               .optional()
               .describe("Flag color"),
           })
-          .passthrough()
+          .passthrough(),
       )
       .min(1)
       .describe("Array of transactions to update"),
@@ -267,12 +261,12 @@ export function registerUpdateTransactionsTool(server: McpServer): void {
         const response = await updateTransactions(args);
         return successResult(
           `${args.transactions.length} transaction(s) updated in budget ${args.budgetId}`,
-          response
+          response,
         );
       } catch (error) {
         return errorResult(error);
       }
-    }
+    },
   );
 }
 
@@ -294,15 +288,14 @@ export function registerImportTransactionsTool(server: McpServer): void {
         const response = await importTransactions(args);
         return successResult(
           `Transactions imported for budget ${args.budgetId}`,
-          response
+          response,
         );
       } catch (error) {
         return errorResult(error);
       }
-    }
+    },
   );
 }
-
 
 export function registerDeleteTransactionTool(server: McpServer): void {
   const schema = z.object({
@@ -322,12 +315,11 @@ export function registerDeleteTransactionTool(server: McpServer): void {
         const response = await deleteTransaction(args);
         return successResult(
           `Transaction ${args.transactionId} deleted from budget ${args.budgetId}`,
-          response
+          response,
         );
       } catch (error) {
         return errorResult(error);
       }
-    }
+    },
   );
 }
-

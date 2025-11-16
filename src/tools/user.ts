@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { getUser } from "../api/index.js";
-import { successResult, errorResult } from "./utils.js";
+import { errorResult, successResult } from "./utils.js";
 
 export function registerGetUserTool(server: McpServer): void {
   const schema = z.object({});
@@ -20,6 +20,6 @@ export function registerGetUserTool(server: McpServer): void {
       } catch (error) {
         return errorResult(error);
       }
-    }
+    },
   );
 }

@@ -1,7 +1,7 @@
 import type { UserResponse } from "./User.js";
 import { makeRequest } from "../client.js";
 
-export * from './User.js';
+export * from "./User.js";
 
 /**
  * Returns authenticated user information

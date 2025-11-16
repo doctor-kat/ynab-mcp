@@ -7,10 +7,7 @@ const envSchema = z
   .object({
     MCP_SERVER_NAME: z.string().min(1).default("ynab-mcp-server"),
     MCP_LISTEN_PORT: z.coerce.number().int().positive().default(3001),
-    YNAB_BASE_URL: z
-      .string()
-      .url()
-      .default("https://api.ynab.com/v1"),
+    YNAB_BASE_URL: z.string().url().default("https://api.ynab.com/v1"),
     YNAB_ACCESS_TOKEN: z.string().min(1).optional(),
     YNAB_CLIENT_ID: z.string().min(1).optional(),
     YNAB_CLIENT_SECRET: z.string().min(1).optional(),
@@ -64,9 +61,3 @@ export function loadEnv(): Env {
   cachedEnv = parsed.data;
   return parsed.data;
 }
-
-
-
-
-
-
