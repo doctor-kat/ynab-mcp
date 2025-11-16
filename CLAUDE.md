@@ -11,9 +11,11 @@ This is a TypeScript Model Context Protocol (MCP) server that wraps the YNAB API
 1. **Environment Configuration**: Uses `dotenv` and `zod` for environment loading and validation
 2. **API Client**: Strongly-typed functions (one per endpoint) organized by domain, using types from the OpenAPI spec
 3. **MCP Server**: Implements the Model Context Protocol with stdio transport
-4. **Staging System**: In-memory tracker for staging and reviewing transaction modifications before applying
-5. **Tool Registration**: Provides MCP tools for:
-   - Budget, account, and transaction discovery helpers
+4. **Budget Context System**: In-memory cache of budget data to minimize API calls (ONE call at startup, ZERO for operations)
+5. **Staging System**: In-memory tracker for staging and reviewing transaction modifications before applying
+6. **Tool Registration**: Provides MCP tools for:
+   - Budget context and discovery helpers
+   - Account, transaction, category, and payee management
    - Transaction categorization and splitting with stage-review-apply workflow
 
 ## Development Setup
@@ -39,15 +41,19 @@ This is a TypeScript Model Context Protocol (MCP) server that wraps the YNAB API
   - `payee-locations/` – Payee location functions
   - `months/` – Monthly budget functions
   - `scheduled-transactions/` – Scheduled transaction functions
+- `src/budget/` – Budget context system:
+  - `types.ts` – TypeScript types for budget context and metadata
+  - `budget-context.ts` – Singleton manager for cached budget data
 - `src/staging/` – Transaction staging system:
   - `types.ts` – TypeScript types for staged changes and session state
   - `staged-changes.ts` – Singleton tracker for managing staged modifications
 - `src/server.ts` – MCP server factory + stdio bootstrapper
 - `src/tools/` – MCP tool registrations:
+  - `budget-context-tools.ts` – Budget context tools (get, set, refresh)
   - Transaction, budget, account, category, payee tools
   - `staging-tools.ts` – Staging, review, and apply tools
 - `tools/generate_types.py` – Python-based type generator leveraging vendored PyYAML
-- `tests/` – Test suite for staging system and API client behavior
+- `tests/` – Test suite for budget context, staging system, and API client behavior
 
 ## Core Functionality
 
@@ -75,9 +81,10 @@ const result = await updateTransaction({
 ```
 
 ### MCP Tools:
-The server registers 40 tools across all YNAB API endpoints and change management:
+The server registers 43 tools across all YNAB API endpoints and change management:
 - 1 user tool (get user info)
 - 3 budget tools (list, get by ID, get settings)
+- **3 budget context tools** (get context, set active budget, refresh cache)
 - 3 account tools (list, create, get by ID)
 - 5 category tools (list, get, update, get month category, update month category)
 - 3 payee tools (list, get, update)
@@ -87,7 +94,7 @@ The server registers 40 tools across all YNAB API endpoints and change managemen
 - 5 scheduled transaction tools (list, create, get, update, delete)
 - **5 staging tools** (stage categorization, stage split, review staged changes, apply changes, clear staged changes)
 
-All tools follow the naming pattern `ynab.{operationName}` (e.g., `ynab.getTransactions`, `ynab.updateTransaction`, `ynab.stageCategorization`)
+All tools follow the naming pattern `ynab.{operationName}` (e.g., `ynab.getTransactions`, `ynab.updateTransaction`, `ynab.getBudgetContext`)
 
 ### Transaction Staging:
 
@@ -157,6 +164,70 @@ const cleared = await ynab.clearChanges();
 // Discards all staged changes without applying
 ```
 
+### Budget Context System:
+
+The server implements a **budget context cache** to minimize API calls and improve performance for LLMs:
+
+#### Core Strategy:
+- **ONE** API call at server startup to fetch all budgets
+- **ZERO** API calls for subsequent budget context operations
+- Cached data includes budget metadata (name, currency format, date format, etc.)
+- Automatic active budget selection for single-budget users
+
+#### How It Works:
+
+1. **Initialization**: At server startup, the budget context calls `getBudgets()` once and caches all budget information
+2. **Auto-set Active Budget**: If the user has exactly one budget, it's automatically set as the active budget
+3. **Cached Lookups**: All budget context queries use cached data (no API calls)
+4. **Manual Refresh**: Users can explicitly refresh the cache if budgets are added/removed
+
+#### Available Tools:
+
+**`ynab.getBudgetContext`**
+- Returns cached budget information (ZERO API calls)
+- Shows all available budgets with metadata
+- Displays currently active budget ID and name
+- Use this to discover budgetId values for other tools
+
+**`ynab.setActiveBudget`**
+- Sets the active budget in the context (ZERO API calls)
+- Validates budgetId against cached budgets
+- Useful for multi-budget users to track working context
+
+**`ynab.refreshBudgetContext`**
+- Refreshes the cache by calling the YNAB API (ONE API call)
+- Use only when budgets may have been added, removed, or renamed
+- Rarely needed - cache is populated at startup
+
+#### LLM Workflow:
+
+For LLMs (especially local models), this system provides an efficient way to get budget IDs:
+
+```typescript
+// Step 1: Get budget context from cache (no API call)
+const context = await ynab.getBudgetContext();
+// Returns: { budgets: [...], activeBudgetId: "budget-123", ... }
+
+// Step 2: Use the budgetId in other tools
+const transactions = await ynab.getTransactions({
+  budgetId: context.activeBudgetId,  // or select from context.budgets
+  sinceDate: "2025-01-01"
+});
+```
+
+#### Benefits:
+- **Performance**: Eliminates repeated `getBudgets()` calls (saves 100s of API calls per session)
+- **Simplicity**: Single-budget users get their budgetId instantly
+- **Efficiency**: All budget metadata cached for fast lookups
+- **LLM-friendly**: Reduces token usage by avoiding redundant API responses
+
+#### Implementation Details:
+- **Singleton pattern**: Uses `BudgetContextManager` singleton (similar to staging system)
+- **In-memory cache**: Budgets stored in memory for the server session
+- **Session-scoped**: Cache persists until server restart
+- **Lazy evaluation**: Budget metadata built into a Map for O(1) lookups
+- **Error handling**: Initialization errors are logged but don't crash the server
+
 ### Testing Approach:
 The project uses a comprehensive multi-layer testing strategy:
 
@@ -164,12 +235,13 @@ The project uses a comprehensive multi-layer testing strategy:
 - **Test Structure**:
   - `tests/api/` - Unit tests for API client functions with mocked HTTP
   - `tests/server/` - Integration tests for MCP server initialization
+  - `tests/budget/` - Budget context tests covering initialization, caching, and API call minimization
   - `tests/staging/` - Staged changes tracker tests covering staging, clearing, and filtering
   - `tests/e2e/` - End-to-end tests using MCP Client SDK (skipped by default)
   - `tests/helpers/` - Mock utilities and test environment helpers
 - **Features**: Fast execution, watch mode, UI mode, code coverage, and TypeScript support
 - **Mocking Strategy**: Mock HTTP fetch implementation to avoid network calls
-- **Coverage**: Tests validate success scenarios, error handling, parameter validation, schema compliance, and staging workflows
+- **Coverage**: Tests validate success scenarios, error handling, parameter validation, schema compliance, budget context caching, and staging workflows
 - **Manual Testing**: MCP Inspector for interactive tool testing during development
 
 See `tests/README.md` for detailed testing guide and best practices

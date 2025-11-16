@@ -62,7 +62,7 @@ export function registerGetTransactionsTool(server: McpServer): void {
     {
       title: "Get transactions",
       description:
-        "Returns budget transactions with optional filters for account, category, payee, or month. Excludes pending transactions. ⚠️ Can return large payloads - use sinceDate and limit parameters to reduce context size for local LLMs.",
+        "Retrieve and return budget transactions with optional filters for account, category, payee, or month. Excludes pending transactions. ⚠️ Can return large payloads - use sinceDate and limit parameters to reduce context size for local LLMs. Use ynab.getBudgetContext to get your budgetId. To discover accountId, categoryId, or payeeId values, use ynab.getAccounts, ynab.getCategories, or ynab.getPayees respectively.",
       inputSchema: schema.shape,
     },
     async (args: any) => {
@@ -196,7 +196,7 @@ export function registerCreateTransactionTool(server: McpServer): void {
     {
       title: "Create transaction",
       description:
-        "Creates a single transaction or multiple transactions. Scheduled transactions cannot be created on this endpoint.",
+        "Create a single transaction or multiple transactions. Scheduled transactions cannot be created on this endpoint. Requires budgetId (use ynab.getBudgetContext to get your budgetId) and account_id (use ynab.getAccounts if needed). For category_id and payee_id, use ynab.getCategories or ynab.getPayees.",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -259,7 +259,7 @@ export function registerUpdateTransactionsTool(server: McpServer): void {
     "ynab.updateTransactions",
     {
       title: "Update transactions",
-      description: "Updates multiple transactions by id or import_id",
+      description: "Update multiple transactions by id or import_id. Requires budgetId (use ynab.getBudgetContext to get your budgetId). To get transaction IDs, use ynab.getTransactions. For category_id and payee_id values, use ynab.getCategories or ynab.getPayees.",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -290,7 +290,7 @@ export function registerImportTransactionsTool(server: McpServer): void {
     {
       title: "Import transactions",
       description:
-        'Imports available transactions on all linked accounts. Equivalent to clicking "Import" on each account.',
+        'Import available transactions on all linked accounts. Equivalent to clicking "Import" on each account. Requires budgetId (use ynab.getBudgetContext to get your budgetId).',
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -321,7 +321,7 @@ export function registerDeleteTransactionTool(server: McpServer): void {
     "ynab.deleteTransaction",
     {
       title: "Delete transaction",
-      description: "Deletes a transaction",
+      description: "Delete a transaction. Requires budgetId (use ynab.getBudgetContext to get your budgetId) and transactionId (use ynab.getTransactions if needed).",
       inputSchema: schema.shape,
     },
     async (args) => {

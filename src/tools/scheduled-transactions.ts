@@ -22,7 +22,7 @@ export function registerGetScheduledTransactionsTool(server: McpServer): void {
     "ynab.getScheduledTransactions",
     {
       title: "Get scheduled transactions",
-      description: "Returns all scheduled transactions",
+      description: "Retrieve and return all scheduled transactions. Use ynab.getBudgetContext to get your budgetId.",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -84,7 +84,7 @@ export function registerCreateScheduledTransactionTool(
     {
       title: "Create scheduled transaction",
       description:
-        "Creates a single scheduled transaction (a transaction with a future date)",
+        "Create a single scheduled transaction (a transaction with a future date). Requires budgetId (use ynab.getBudgetContext to get your budgetId) and account_id (use ynab.getAccounts if needed). For category_id and payee_id, use ynab.getCategories or ynab.getPayees.",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -164,7 +164,7 @@ export function registerUpdateScheduledTransactionTool(
     "ynab.updateScheduledTransaction",
     {
       title: "Update scheduled transaction",
-      description: "Updates a single scheduled transaction",
+      description: "Update a single scheduled transaction. Requires budgetId (use ynab.getBudgetContext to get your budgetId) and scheduledTransactionId (use ynab.getScheduledTransactions if needed).",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -200,7 +200,7 @@ export function registerDeleteScheduledTransactionTool(
     "ynab.deleteScheduledTransaction",
     {
       title: "Delete scheduled transaction",
-      description: "Deletes a scheduled transaction",
+      description: "Delete a scheduled transaction. Requires budgetId (use ynab.getBudgetContext to get your budgetId) and scheduledTransactionId (use ynab.getScheduledTransactions if needed).",
       inputSchema: schema.shape,
     },
     async (args) => {

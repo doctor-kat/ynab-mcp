@@ -8,6 +8,11 @@ import {
   registerGetBudgetsTool,
 } from "./budgets.js";
 import {
+  registerGetBudgetContextTool,
+  registerRefreshBudgetContextTool,
+  registerSetActiveBudgetTool,
+} from "./budget-context-tools.js";
+import {
   registerCreateAccountTool,
   registerGetAccountsTool,
 } from "./accounts.js";
@@ -62,6 +67,12 @@ export function registerTools({ server }: ToolRegistrationContext): number {
   registerGetBudgetsTool(server);
   registerGetBudgetByIdTool(server);
   registerGetBudgetSettingsByIdTool(server);
+  toolCount += 3;
+
+  // Budget Context (3 tools)
+  registerGetBudgetContextTool(server);
+  registerSetActiveBudgetTool(server);
+  registerRefreshBudgetContextTool(server);
   toolCount += 3;
 
   // Accounts (2 tools)

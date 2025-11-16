@@ -42,11 +42,23 @@ export function successResult(title: string, data: unknown): any {
 
 export function errorResult(error: unknown): any {
   if (error instanceof YnabApiError) {
+    // Check if this is a budget-related error
+    const isBudgetError =
+      error.status === 404 &&
+      (error.message.toLowerCase().includes('budget') ||
+       JSON.stringify(error.details).toLowerCase().includes('budget'));
+
+    let errorMessage = `❌ YNAB API error (${error.status}): ${error.message}`;
+
+    if (isBudgetError) {
+      errorMessage += `\n\n💡 To get your budgetId, use ynab.getBudgetContext. If you have multiple budgets, use ynab.setActiveBudget to set the active one.`;
+    }
+
     return {
       content: [
         {
           type: "text",
-          text: `❌ YNAB API error (${error.status}): ${error.message}`,
+          text: errorMessage,
         },
       ],
       data: error.details,

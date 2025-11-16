@@ -23,7 +23,7 @@ export function registerGetCategoriesTool(server: McpServer): void {
     {
       title: "Get categories",
       description:
-        "Returns all categories grouped by category group. Amounts are specific to the current budget month (UTC).",
+        "Retrieve and return all categories grouped by category group. Amounts are specific to the current budget month (UTC). Use ynab.getBudgetContext to get your budgetId.",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -81,7 +81,7 @@ export function registerUpdateCategoryTool(server: McpServer): void {
     "ynab.updateCategory",
     {
       title: "Update category",
-      description: "Updates a category",
+      description: "Update a category. Requires budgetId (use ynab.getBudgetContext to get your budgetId) and categoryId (use ynab.getCategories if needed).",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -117,7 +117,7 @@ export function registerGetMonthCategoryByIdTool(server: McpServer): void {
     {
       title: "Get month category by ID",
       description:
-        "Returns a single category for a specific budget month. Amounts are specific to that month.",
+        "Retrieve and return a single category for a specific budget month. Amounts are specific to that month. Requires budgetId (use ynab.getBudgetContext to get your budgetId) and categoryId (use ynab.getCategories if needed).",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -155,7 +155,7 @@ export function registerUpdateMonthCategoryTool(server: McpServer): void {
     {
       title: "Update month category",
       description:
-        "Updates a category for a specific month. Only budgeted amount can be updated.",
+        "Update a category for a specific month. Only budgeted amount can be updated. Requires budgetId (use ynab.getBudgetContext to get your budgetId) and categoryId (use ynab.getCategories if needed).",
       inputSchema: schema.shape,
     },
     async (args) => {

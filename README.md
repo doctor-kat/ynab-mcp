@@ -6,11 +6,13 @@ A TypeScript Model Context Protocol (MCP) server that wraps the [YNAB API](https
 
 - 🔐 Environment-driven configuration with validation via `zod`.
 - 🔁 Auto-generated TypeScript types and endpoint metadata derived from the live OpenAPI spec.
-- 🧰 MCP tools covering:
-  - Generic endpoint access (`ynab.apiRequest`)
+- 🧰 43 MCP tools covering:
+  - Budget context system (cached budget data, minimal API calls)
   - Budget, account, and transaction discovery helpers
-  - Focused utilities for categorizing and splitting transactions
-- 🧪 Node built-in tests (`node --test`) for core client behaviour.
+  - Transaction categorization and splitting with stage-review-apply workflow
+  - Full YNAB API coverage (categories, payees, scheduled transactions, etc.)
+- ⚡ Performance optimized for local LLMs (budget context caching, efficient data structures)
+- 🧪 Comprehensive test suite using Vitest with mocked API responses.
 
 ## Getting Started
 

@@ -17,7 +17,7 @@ export function registerGetAccountsTool(server: McpServer): void {
     "ynab.getAccounts",
     {
       title: "Get accounts",
-      description: "Returns all accounts for a budget",
+      description: "Retrieve and return all accounts for a budget. Use ynab.getBudgetContext to get your budgetId.",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -67,7 +67,7 @@ export function registerCreateAccountTool(server: McpServer): void {
     "ynab.createAccount",
     {
       title: "Create account",
-      description: "Creates a new account in the specified budget",
+      description: "Create a new account in the specified budget. Requires budgetId (use ynab.getBudgetContext to get your budgetId).",
       inputSchema: schema.shape,
     },
     async (args) => {

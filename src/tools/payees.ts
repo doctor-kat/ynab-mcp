@@ -17,7 +17,7 @@ export function registerGetPayeesTool(server: McpServer): void {
     "ynab.getPayees",
     {
       title: "Get payees",
-      description: "Returns all payees for a budget",
+      description: "Retrieve and return all payees for a budget. Use ynab.getBudgetContext to get your budgetId.",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -47,7 +47,7 @@ export function registerUpdatePayeeTool(server: McpServer): void {
     "ynab.updatePayee",
     {
       title: "Update payee",
-      description: "Updates a payee",
+      description: "Update a payee. Requires budgetId (use ynab.getBudgetContext to get your budgetId) and payeeId (use ynab.getPayees if needed).",
       inputSchema: schema.shape,
     },
     async (args) => {

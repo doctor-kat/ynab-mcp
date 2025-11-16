@@ -10,7 +10,7 @@ export function registerGetUserTool(server: McpServer): void {
     "ynab.getUser",
     {
       title: "Get user",
-      description: "Returns authenticated user information",
+      description: "Retrieve and return authenticated user information.",
       inputSchema: schema.shape,
     },
     async () => {

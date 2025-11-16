@@ -20,7 +20,7 @@ export function registerGetBudgetsTool(server: McpServer): void {
     {
       title: "Get budgets",
       description:
-        "Lists budgets with summaries. Can optionally include account details.",
+        "Retrieve and return all budgets with summaries. Can optionally include account details. NOTE: For discovering budgetId values, use ynab.getBudgetContext instead (more efficient, ZERO API calls).",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -49,7 +49,7 @@ export function registerGetBudgetByIdTool(server: McpServer): void {
     {
       title: "Get budget by ID",
       description:
-        "Retrieves a single budget with all related entities. This is effectively a full budget export.",
+        "Retrieve a single budget with all related entities. This is effectively a full budget export. Requires budgetId (use ynab.getBudgetContext to get your budgetId).",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -72,7 +72,7 @@ export function registerGetBudgetSettingsByIdTool(server: McpServer): void {
     "ynab.getBudgetSettingsById",
     {
       title: "Get budget settings by ID",
-      description: "Returns settings for a specific budget",
+      description: "Retrieve and return settings for a specific budget. Requires budgetId (use ynab.getBudgetContext to get your budgetId).",
       inputSchema: schema.shape,
     },
     async (args) => {
