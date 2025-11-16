@@ -48,6 +48,87 @@ A TypeScript Model Context Protocol (MCP) server that wraps the [YNAB API](https
    pnpm test
    ```
 
+## Connecting to LM Studio
+
+[LM Studio](https://lmstudio.ai/) version 0.3.17+ supports Model Context Protocol (MCP) servers, allowing you to use this YNAB server with local language models.
+
+### Prerequisites
+
+- **LM Studio 0.3.17 or later** installed
+- **Node.js 20+** and **pnpm** installed
+- **YNAB Access Token** or OAuth credentials configured (see step 3 in Getting Started)
+
+### Configuration Steps
+
+1. **Build the MCP server**
+   ```bash
+   pnpm install
+   pnpm build
+   ```
+   This creates the compiled server in the `dist/` directory.
+
+2. **Locate your project directory**
+   Note the absolute path to this repository (e.g., `/home/user/ynab-mcp`).
+
+3. **Open LM Studio's MCP configuration**
+   - Launch LM Studio
+   - Switch to the **Program** tab in the right sidebar
+   - Click **Install** → **Edit mcp.json**
+   - The in-app editor will open
+
+4. **Add the YNAB server configuration**
+
+   Add this configuration to your LM Studio `mcp.json`:
+   ```json
+   {
+     "mcpServers": {
+       "ynab": {
+         "command": "node",
+         "args": ["/absolute/path/to/ynab-mcp/dist/index.js"],
+         "env": {
+           "YNAB_ACCESS_TOKEN": "your-ynab-access-token-here"
+         }
+       },
+       "ynab-dev": {
+         "command": "pnpm",
+         "args": ["--dir", "/absolute/path/to/ynab-mcp", "dev"],
+         "env": {
+           "YNAB_ACCESS_TOKEN": "your-ynab-access-token-here"
+         }
+       }
+     }
+   }
+   ```
+
+   **Configuration options:**
+   - **`ynab`** - Production mode using the compiled build (requires `pnpm build` first)
+   - **`ynab-dev`** - Development mode using `tsx` for live TypeScript execution (no build required)
+
+   **Important:**
+   - Replace `/absolute/path/to/ynab-mcp` with your actual repository path
+   - Replace `your-ynab-access-token-here` with your [YNAB personal access token](https://api.ynab.com/)
+   - For OAuth flows, add `YNAB_CLIENT_ID`, `YNAB_CLIENT_SECRET`, and `YNAB_REDIRECT_URI` instead
+   - You can use either configuration or both - choose based on your workflow
+
+5. **Save and reload**
+   - Save the `mcp.json` file (LM Studio auto-detects changes)
+   - The YNAB server will appear in your available tools
+   - When the model attempts to call YNAB tools, LM Studio will show a confirmation dialog
+
+### Security Notes
+
+- **Never commit** your `mcp.json` with real access tokens
+- LM Studio displays tool call confirmations before executing YNAB API requests
+- You can whitelist frequently-used tools or manage permissions via **Tools & Integrations** in LM Studio settings
+- Only install MCP servers from trusted sources
+
+### Troubleshooting
+
+- **Server not appearing:** Verify the absolute path to `dist/index.js` is correct
+- **Authentication errors:** Double-check your `YNAB_ACCESS_TOKEN` is valid and has not expired
+- **Module errors:** Ensure you ran `pnpm build` and the `dist/` directory exists
+- **Token limits:** Some tools may generate large responses; consider using more capable local models
+
 ## Key Scripts
 
 | Command | Description |
