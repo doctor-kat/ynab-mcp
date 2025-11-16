@@ -28,7 +28,7 @@ export async function getScheduledTransactions(params: {
     );
   }
 
-  const path = `/budgets/${encodeURIComponent(params.budgetId)}/scheduled_transactions`;
+  const path = `budgets/${encodeURIComponent(params.budgetId)}/scheduled_transactions`;
   const url = queryParams.toString() ? `${path}?${queryParams}` : path;
 
   return makeRequest<ScheduledTransactionsResponse>("GET", url);
@@ -43,7 +43,7 @@ export async function createScheduledTransaction(params: {
 }): Promise<ScheduledTransactionResponse> {
   return makeRequest<ScheduledTransactionResponse>(
     "POST",
-    `/budgets/${encodeURIComponent(params.budgetId)}/scheduled_transactions`,
+    `budgets/${encodeURIComponent(params.budgetId)}/scheduled_transactions`,
     { scheduled_transaction: params.scheduledTransaction },
   );
 }
@@ -57,7 +57,7 @@ export async function getScheduledTransactionById(params: {
 }): Promise<ScheduledTransactionResponse> {
   return makeRequest<ScheduledTransactionResponse>(
     "GET",
-    `/budgets/${encodeURIComponent(params.budgetId)}/scheduled_transactions/${encodeURIComponent(params.scheduledTransactionId)}`,
+    `budgets/${encodeURIComponent(params.budgetId)}/scheduled_transactions/${encodeURIComponent(params.scheduledTransactionId)}`,
   );
 }
 
@@ -71,7 +71,7 @@ export async function updateScheduledTransaction(params: {
 }): Promise<ScheduledTransactionResponse> {
   return makeRequest<ScheduledTransactionResponse>(
     "PUT",
-    `/budgets/${encodeURIComponent(params.budgetId)}/scheduled_transactions/${encodeURIComponent(params.scheduledTransactionId)}`,
+    `budgets/${encodeURIComponent(params.budgetId)}/scheduled_transactions/${encodeURIComponent(params.scheduledTransactionId)}`,
     { scheduled_transaction: params.scheduledTransaction },
   );
 }
@@ -85,6 +85,6 @@ export async function deleteScheduledTransaction(params: {
 }): Promise<ScheduledTransactionResponse> {
   return makeRequest<ScheduledTransactionResponse>(
     "DELETE",
-    `/budgets/${encodeURIComponent(params.budgetId)}/scheduled_transactions/${encodeURIComponent(params.scheduledTransactionId)}`,
+    `budgets/${encodeURIComponent(params.budgetId)}/scheduled_transactions/${encodeURIComponent(params.scheduledTransactionId)}`,
   );
 }

@@ -8,7 +8,10 @@
       "Bash(pnpm build)",
       "WebFetch(domain:api.ynab.com)",
       "Bash(git rm:*)",
-      "Bash(timeout 2 pnpm start:*)"
+      "Bash(timeout 2 pnpm start:*)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm exec tsx:*)",
+      "Bash(pnpm install:*)"
     ],
     "deny": [],
     "ask": []

@@ -47,7 +47,7 @@ describe.skip("E2E - MCP Client/Server Communication", () => {
         env: {
           ...process.env,
           YNAB_ACCESS_TOKEN: "test-token-123",
-          YNAB_BASE_URL: "https://api.ynab.com/v1",
+          YNAB_BASE_URL: "https://api.ynab.com/v1/",
           MCP_SERVER_NAME: "test-server",
         },
         cwd: projectRoot,
@@ -70,7 +70,7 @@ describe.skip("E2E - MCP Client/Server Communication", () => {
         env: {
           ...process.env,
           YNAB_ACCESS_TOKEN: "test-token-123",
-          YNAB_BASE_URL: "https://api.ynab.com/v1",
+          YNAB_BASE_URL: "https://api.ynab.com/v1/",
           MCP_SERVER_NAME: "test-server",
         },
         cwd: projectRoot,
@@ -86,7 +86,7 @@ describe.skip("E2E - MCP Client/Server Communication", () => {
       const tools = await client.listTools();
 
       expect(tools.tools).toBeTruthy();
-      expect(tools.tools.length).toBe(35);
+      expect(tools.tools.length).toBe(30);
 
       // Verify a few expected tools
       const toolNames = tools.tools.map((t) => t.name);
@@ -113,7 +113,7 @@ describe.skip("E2E - MCP Client/Server Communication", () => {
         env: {
           ...process.env,
           YNAB_ACCESS_TOKEN: token,
-          YNAB_BASE_URL: "https://api.ynab.com/v1",
+          YNAB_BASE_URL: "https://api.ynab.com/v1/",
           MCP_SERVER_NAME: "test-server",
         },
         cwd: projectRoot,
@@ -136,7 +136,7 @@ describe.skip("E2E - MCP Client/Server Communication", () => {
       expect(Array.isArray(budgetsResult.content)).toBe(true);
 
       // Verify we got a response
-      const hasContent = budgetsResult.content.some(
+      const hasContent = (budgetsResult.content as any[]).some(
         (c: any) => c.type === "text" && c.text.length > 0,
       );
       expect(hasContent).toBe(true);
@@ -151,7 +151,7 @@ describe.skip("E2E - MCP Client/Server Communication", () => {
         env: {
           ...process.env,
           YNAB_ACCESS_TOKEN: "test-token-123",
-          YNAB_BASE_URL: "https://api.ynab.com/v1",
+          YNAB_BASE_URL: "https://api.ynab.com/v1/",
           MCP_SERVER_NAME: "test-server",
         },
         cwd: projectRoot,
@@ -168,7 +168,7 @@ describe.skip("E2E - MCP Client/Server Communication", () => {
         client.callTool({
           name: "ynab.nonExistentTool",
           arguments: {},
-        })
+        }),
       ).rejects.toThrow();
     });
   });

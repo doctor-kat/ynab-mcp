@@ -20,7 +20,7 @@ export async function getPayees(params: {
     );
   }
 
-  const path = `/budgets/${encodeURIComponent(params.budgetId)}/payees`;
+  const path = `budgets/${encodeURIComponent(params.budgetId)}/payees`;
   const url = queryParams.toString() ? `${path}?${queryParams}` : path;
 
   return makeRequest<PayeesResponse>("GET", url);
@@ -35,7 +35,7 @@ export async function getPayeeById(params: {
 }): Promise<PayeeResponse> {
   return makeRequest<PayeeResponse>(
     "GET",
-    `/budgets/${encodeURIComponent(params.budgetId)}/payees/${encodeURIComponent(params.payeeId)}`,
+    `budgets/${encodeURIComponent(params.budgetId)}/payees/${encodeURIComponent(params.payeeId)}`,
   );
 }
 
@@ -49,7 +49,7 @@ export async function updatePayee(params: {
 }): Promise<SavePayeeResponse> {
   return makeRequest<SavePayeeResponse>(
     "PATCH",
-    `/budgets/${encodeURIComponent(params.budgetId)}/payees/${encodeURIComponent(params.payeeId)}`,
+    `budgets/${encodeURIComponent(params.budgetId)}/payees/${encodeURIComponent(params.payeeId)}`,
     { payee: params.payee },
   );
 }

@@ -22,7 +22,7 @@ export async function getAccounts(params: {
     );
   }
 
-  const path = `/budgets/${encodeURIComponent(params.budgetId)}/accounts`;
+  const path = `budgets/${encodeURIComponent(params.budgetId)}/accounts`;
   const url = queryParams.toString() ? `${path}?${queryParams}` : path;
 
   return makeRequest<AccountsResponse>("GET", url);
@@ -37,7 +37,7 @@ export async function createAccount(params: {
 }): Promise<AccountResponse> {
   return makeRequest<AccountResponse>(
     "POST",
-    `/budgets/${encodeURIComponent(params.budgetId)}/accounts`,
+    `budgets/${encodeURIComponent(params.budgetId)}/accounts`,
     { account: params.account },
   );
 }
@@ -51,6 +51,6 @@ export async function getAccountById(params: {
 }): Promise<AccountResponse> {
   return makeRequest<AccountResponse>(
     "GET",
-    `/budgets/${encodeURIComponent(params.budgetId)}/accounts/${encodeURIComponent(params.accountId)}`,
+    `budgets/${encodeURIComponent(params.budgetId)}/accounts/${encodeURIComponent(params.accountId)}`,
   );
 }

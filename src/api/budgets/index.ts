@@ -18,7 +18,7 @@ export async function getBudgets(params?: {
     queryParams.set("include_accounts", String(params.includeAccounts));
   }
 
-  const path = "/budgets";
+  const path = "budgets";
   const url = queryParams.toString() ? `${path}?${queryParams}` : path;
 
   return makeRequest<BudgetSummaryResponse>("GET", url);
@@ -40,7 +40,7 @@ export async function getBudgetById(params: {
     );
   }
 
-  const path = `/budgets/${encodeURIComponent(params.budgetId)}`;
+  const path = `budgets/${encodeURIComponent(params.budgetId)}`;
   const url = queryParams.toString() ? `${path}?${queryParams}` : path;
 
   return makeRequest<BudgetDetailResponse>("GET", url);
@@ -54,6 +54,6 @@ export async function getBudgetSettingsById(params: {
 }): Promise<BudgetSettingsResponse> {
   return makeRequest<BudgetSettingsResponse>(
     "GET",
-    `/budgets/${encodeURIComponent(params.budgetId)}/settings`,
+    `budgets/${encodeURIComponent(params.budgetId)}/settings`,
   );
 }

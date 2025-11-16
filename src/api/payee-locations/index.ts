@@ -14,7 +14,7 @@ export async function getPayeeLocations(params: {
 }): Promise<PayeeLocationsResponse> {
   return makeRequest<PayeeLocationsResponse>(
     "GET",
-    `/budgets/${encodeURIComponent(params.budgetId)}/payee_locations`,
+    `budgets/${encodeURIComponent(params.budgetId)}/payee_locations`,
   );
 }
 
@@ -27,7 +27,7 @@ export async function getPayeeLocationById(params: {
 }): Promise<PayeeLocationResponse> {
   return makeRequest<PayeeLocationResponse>(
     "GET",
-    `/budgets/${encodeURIComponent(params.budgetId)}/payee_locations/${encodeURIComponent(params.payeeLocationId)}`,
+    `budgets/${encodeURIComponent(params.budgetId)}/payee_locations/${encodeURIComponent(params.payeeLocationId)}`,
   );
 }
 
@@ -40,6 +40,6 @@ export async function getPayeeLocationsByPayee(params: {
 }): Promise<PayeeLocationsResponse> {
   return makeRequest<PayeeLocationsResponse>(
     "GET",
-    `/budgets/${encodeURIComponent(params.budgetId)}/payees/${encodeURIComponent(params.payeeId)}/payee_locations`,
+    `budgets/${encodeURIComponent(params.budgetId)}/payees/${encodeURIComponent(params.payeeId)}/payee_locations`,
   );
 }

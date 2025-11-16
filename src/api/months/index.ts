@@ -20,7 +20,7 @@ export async function getBudgetMonths(params: {
     );
   }
 
-  const path = `/budgets/${encodeURIComponent(params.budgetId)}/months`;
+  const path = `budgets/${encodeURIComponent(params.budgetId)}/months`;
   const url = queryParams.toString() ? `${path}?${queryParams}` : path;
 
   return makeRequest<MonthSummariesResponse>("GET", url);
@@ -35,6 +35,6 @@ export async function getBudgetMonth(params: {
 }): Promise<MonthDetailResponse> {
   return makeRequest<MonthDetailResponse>(
     "GET",
-    `/budgets/${encodeURIComponent(params.budgetId)}/months/${encodeURIComponent(params.month)}`,
+    `budgets/${encodeURIComponent(params.budgetId)}/months/${encodeURIComponent(params.month)}`,
   );
 }

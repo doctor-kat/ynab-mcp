@@ -187,8 +187,8 @@ describe("API Client", () => {
     it("should construct proper URL from base and path", async () => {
       const { fetch: mockFetch, calls } = createMockFetch();
 
-      initializeClient({ baseUrl: "https://api.ynab.com/v1" });
-      await makeRequest("GET", "/budgets", undefined, mockFetch);
+      initializeClient({ baseUrl: "https://api.ynab.com/v1/" });
+      await makeRequest("GET", "budgets", undefined, mockFetch);
 
       // Check that the URL contains the base URL and the path
       expect(calls[0].url).toContain("api.ynab.com");

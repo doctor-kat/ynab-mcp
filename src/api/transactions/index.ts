@@ -41,7 +41,7 @@ export async function getTransactions(params: {
     );
   }
 
-  const path = `/budgets/${encodeURIComponent(params.budgetId)}/transactions`;
+  const path = `budgets/${encodeURIComponent(params.budgetId)}/transactions`;
   const url = queryParams.toString() ? `${path}?${queryParams}` : path;
 
   return makeRequest<TransactionsResponse>("GET", url);
@@ -60,7 +60,7 @@ export async function createTransaction(params: {
 }): Promise<SaveTransactionsResponse> {
   return makeRequest<SaveTransactionsResponse>(
     "POST",
-    `/budgets/${encodeURIComponent(params.budgetId)}/transactions`,
+    `budgets/${encodeURIComponent(params.budgetId)}/transactions`,
     params.data,
   );
 }
@@ -74,7 +74,7 @@ export async function updateTransactions(params: {
 }): Promise<SaveTransactionsResponse> {
   return makeRequest<SaveTransactionsResponse>(
     "PATCH",
-    `/budgets/${encodeURIComponent(params.budgetId)}/transactions`,
+    `budgets/${encodeURIComponent(params.budgetId)}/transactions`,
     { transactions: params.transactions },
   );
 }
@@ -92,7 +92,7 @@ export async function importTransactions(params: {
 }): Promise<TransactionsImportResponse> {
   return makeRequest<TransactionsImportResponse>(
     "POST",
-    `/budgets/${encodeURIComponent(params.budgetId)}/transactions/import`,
+    `budgets/${encodeURIComponent(params.budgetId)}/transactions/import`,
   );
 }
 
@@ -105,7 +105,7 @@ export async function getTransactionById(params: {
 }): Promise<TransactionResponse> {
   return makeRequest<TransactionResponse>(
     "GET",
-    `/budgets/${encodeURIComponent(params.budgetId)}/transactions/${encodeURIComponent(params.transactionId)}`,
+    `budgets/${encodeURIComponent(params.budgetId)}/transactions/${encodeURIComponent(params.transactionId)}`,
   );
 }
 
@@ -119,7 +119,7 @@ export async function updateTransaction(params: {
 }): Promise<TransactionResponse> {
   return makeRequest<TransactionResponse>(
     "PUT",
-    `/budgets/${encodeURIComponent(params.budgetId)}/transactions/${encodeURIComponent(params.transactionId)}`,
+    `budgets/${encodeURIComponent(params.budgetId)}/transactions/${encodeURIComponent(params.transactionId)}`,
     { transaction: params.transaction },
   );
 }
@@ -133,7 +133,7 @@ export async function deleteTransaction(params: {
 }): Promise<TransactionResponse> {
   return makeRequest<TransactionResponse>(
     "DELETE",
-    `/budgets/${encodeURIComponent(params.budgetId)}/transactions/${encodeURIComponent(params.transactionId)}`,
+    `budgets/${encodeURIComponent(params.budgetId)}/transactions/${encodeURIComponent(params.transactionId)}`,
   );
 }
 
@@ -157,7 +157,7 @@ export async function getTransactionsByAccount(params: {
     );
   }
 
-  const path = `/budgets/${encodeURIComponent(params.budgetId)}/accounts/${encodeURIComponent(params.accountId)}/transactions`;
+  const path = `budgets/${encodeURIComponent(params.budgetId)}/accounts/${encodeURIComponent(params.accountId)}/transactions`;
   const url = queryParams.toString() ? `${path}?${queryParams}` : path;
 
   return makeRequest<TransactionsResponse>("GET", url);
@@ -183,7 +183,7 @@ export async function getTransactionsByCategory(params: {
     );
   }
 
-  const path = `/budgets/${encodeURIComponent(params.budgetId)}/categories/${encodeURIComponent(params.categoryId)}/transactions`;
+  const path = `budgets/${encodeURIComponent(params.budgetId)}/categories/${encodeURIComponent(params.categoryId)}/transactions`;
   const url = queryParams.toString() ? `${path}?${queryParams}` : path;
 
   return makeRequest<HybridTransactionsResponse>("GET", url);
@@ -209,7 +209,7 @@ export async function getTransactionsByPayee(params: {
     );
   }
 
-  const path = `/budgets/${encodeURIComponent(params.budgetId)}/payees/${encodeURIComponent(params.payeeId)}/transactions`;
+  const path = `budgets/${encodeURIComponent(params.budgetId)}/payees/${encodeURIComponent(params.payeeId)}/transactions`;
   const url = queryParams.toString() ? `${path}?${queryParams}` : path;
 
   return makeRequest<HybridTransactionsResponse>("GET", url);
@@ -228,7 +228,7 @@ export async function getTransactionsByMonth(params: {
   if (params.sinceDate) queryParams.set("since_date", params.sinceDate);
   if (params.type) queryParams.set("type", params.type);
 
-  const path = `/budgets/${encodeURIComponent(params.budgetId)}/months/${encodeURIComponent(params.month)}/transactions`;
+  const path = `budgets/${encodeURIComponent(params.budgetId)}/months/${encodeURIComponent(params.month)}/transactions`;
   const url = queryParams.toString() ? `${path}?${queryParams}` : path;
 
   return makeRequest<HybridTransactionsResponse>("GET", url);

@@ -29,7 +29,7 @@ export async function getCategories(params: {
     );
   }
 
-  const path = `/budgets/${encodeURIComponent(params.budgetId)}/categories`;
+  const path = `budgets/${encodeURIComponent(params.budgetId)}/categories`;
   const url = queryParams.toString() ? `${path}?${queryParams}` : path;
 
   return makeRequest<CategoriesResponse>("GET", url);
@@ -45,7 +45,7 @@ export async function getCategoryById(params: {
 }): Promise<CategoryResponse> {
   return makeRequest<CategoryResponse>(
     "GET",
-    `/budgets/${encodeURIComponent(params.budgetId)}/categories/${encodeURIComponent(params.categoryId)}`,
+    `budgets/${encodeURIComponent(params.budgetId)}/categories/${encodeURIComponent(params.categoryId)}`,
   );
 }
 
@@ -59,7 +59,7 @@ export async function updateCategory(params: {
 }): Promise<SaveCategoryResponse> {
   return makeRequest<SaveCategoryResponse>(
     "PATCH",
-    `/budgets/${encodeURIComponent(params.budgetId)}/categories/${encodeURIComponent(params.categoryId)}`,
+    `budgets/${encodeURIComponent(params.budgetId)}/categories/${encodeURIComponent(params.categoryId)}`,
     { category: params.category },
   );
 }
@@ -76,7 +76,7 @@ export async function getMonthCategoryById(params: {
 }): Promise<CategoryResponse> {
   return makeRequest<CategoryResponse>(
     "GET",
-    `/budgets/${encodeURIComponent(params.budgetId)}/months/${encodeURIComponent(params.month)}/categories/${encodeURIComponent(params.categoryId)}`,
+    `budgets/${encodeURIComponent(params.budgetId)}/months/${encodeURIComponent(params.month)}/categories/${encodeURIComponent(params.categoryId)}`,
   );
 }
 
@@ -92,7 +92,7 @@ export async function updateMonthCategory(params: {
 }): Promise<SaveCategoryResponse> {
   return makeRequest<SaveCategoryResponse>(
     "PATCH",
-    `/budgets/${encodeURIComponent(params.budgetId)}/months/${encodeURIComponent(params.month)}/categories/${encodeURIComponent(params.categoryId)}`,
+    `budgets/${encodeURIComponent(params.budgetId)}/months/${encodeURIComponent(params.month)}/categories/${encodeURIComponent(params.categoryId)}`,
     { category: params.category },
   );
 }

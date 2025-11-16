@@ -7,5 +7,5 @@ export * from "./User.js";
  * Returns authenticated user information
  */
 export async function getUser(): Promise<UserResponse> {
-  return makeRequest<UserResponse>("GET", "/user");
+  return makeRequest<UserResponse>("GET", "user");
 }
