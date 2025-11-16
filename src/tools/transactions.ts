@@ -13,7 +13,7 @@ import {
   getTransactionsByPayee,
   getTransactionsByMonth,
 } from "../api/index.js";
-import { successResult, errorResult } from "./utils.js";
+import { successResult, errorResult, limitResults, getResultSizeWarning } from "./utils.js";
 
 export function registerGetTransactionsTool(server: McpServer): void {
   const schema = z.object({
@@ -23,17 +23,25 @@ export function registerGetTransactionsTool(server: McpServer): void {
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional()
       .describe(
-        "Only return transactions on or after this date (ISO format YYYY-MM-DD)"
+        "Only return transactions on or after this date (ISO format YYYY-MM-DD). Recommended to prevent large payloads."
       ),
     type: z
       .enum(["uncategorized", "unapproved"])
       .optional()
-      .describe("Filter by transaction type"),
+      .describe("Filter by transaction type (helps reduce payload size)"),
     lastKnowledgeOfServer: z
       .number()
       .int()
       .optional()
       .describe("Server knowledge timestamp for delta requests"),
+    limit: z
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .describe(
+        "Maximum number of transactions to return (applied client-side). Useful for preventing context overflow with local LLMs."
+      ),
   });
 
   server.registerTool(
@@ -41,16 +49,44 @@ export function registerGetTransactionsTool(server: McpServer): void {
     {
       title: "Get transactions",
       description:
-        "Returns budget transactions, excluding any pending transactions",
+        "Returns budget transactions, excluding any pending transactions. ⚠️ Can return large payloads - use sinceDate and limit parameters to reduce context size for local LLMs.",
       inputSchema: schema.shape,
     },
-    async (args) => {
+    async (args: any) => {
       try {
         const response = await getTransactions(args);
-        return successResult(
-          `Transactions for budget ${args.budgetId}`,
-          response
+
+        // Apply client-side limit if specified
+        const { items, truncated, originalCount } = limitResults(
+          response.data.transactions,
+          args.limit
         );
+
+        const limitedResponse = {
+          ...response,
+          data: {
+            ...response.data,
+            transactions: items,
+          },
+        };
+
+        // Generate warning message for large result sets
+        const warning = getResultSizeWarning(
+          items.length,
+          truncated,
+          truncated ? originalCount : undefined
+        );
+
+        const countDisplay = truncated
+          ? `${items.length}/${originalCount} transaction(s)`
+          : `${items.length} transaction(s)`;
+
+        const message = [
+          `Transactions for budget ${args.budgetId}: ${countDisplay}`,
+          warning,
+        ].filter(Boolean).join('\n');
+
+        return successResult(message, limitedResponse);
       } catch (error) {
         return errorResult(error);
       }
@@ -338,17 +374,25 @@ export function registerGetTransactionsByAccountTool(server: McpServer): void {
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional()
       .describe(
-        "Only return transactions on or after this date (ISO format YYYY-MM-DD)"
+        "Only return transactions on or after this date (ISO format YYYY-MM-DD). Recommended to prevent large payloads."
       ),
     type: z
       .enum(["uncategorized", "unapproved"])
       .optional()
-      .describe("Filter by transaction type"),
+      .describe("Filter by transaction type (helps reduce payload size)"),
     lastKnowledgeOfServer: z
       .number()
       .int()
       .optional()
       .describe("Server knowledge timestamp for delta requests"),
+    limit: z
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .describe(
+        "Maximum number of transactions to return (applied client-side). Useful for preventing context overflow with local LLMs."
+      ),
   });
 
   server.registerTool(
@@ -356,16 +400,44 @@ export function registerGetTransactionsByAccountTool(server: McpServer): void {
     {
       title: "Get transactions by account",
       description:
-        "Returns all transactions for a specified account, excluding any pending transactions",
+        "Returns all transactions for a specified account, excluding any pending transactions. ⚠️ Can return large payloads - use sinceDate and limit parameters to reduce context size for local LLMs.",
       inputSchema: schema.shape,
     },
-    async (args) => {
+    async (args: any) => {
       try {
         const response = await getTransactionsByAccount(args);
-        return successResult(
-          `Transactions for account ${args.accountId} in budget ${args.budgetId}`,
-          response
+
+        // Apply client-side limit if specified
+        const { items, truncated, originalCount } = limitResults(
+          response.data.transactions,
+          args.limit
         );
+
+        const limitedResponse = {
+          ...response,
+          data: {
+            ...response.data,
+            transactions: items,
+          },
+        };
+
+        // Generate warning message for large result sets
+        const warning = getResultSizeWarning(
+          items.length,
+          truncated,
+          truncated ? originalCount : undefined
+        );
+
+        const countDisplay = truncated
+          ? `${items.length}/${originalCount} transaction(s)`
+          : `${items.length} transaction(s)`;
+
+        const message = [
+          `Transactions for account ${args.accountId} in budget ${args.budgetId}: ${countDisplay}`,
+          warning,
+        ].filter(Boolean).join('\n');
+
+        return successResult(message, limitedResponse);
       } catch (error) {
         return errorResult(error);
       }
@@ -384,33 +456,69 @@ export function registerGetTransactionsByCategoryTool(
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional()
       .describe(
-        "Only return transactions on or after this date (ISO format YYYY-MM-DD)"
+        "Only return transactions on or after this date (ISO format YYYY-MM-DD). Recommended to prevent large payloads."
       ),
     type: z
       .enum(["uncategorized", "unapproved"])
       .optional()
-      .describe("Filter by transaction type"),
+      .describe("Filter by transaction type (helps reduce payload size)"),
     lastKnowledgeOfServer: z
       .number()
       .int()
       .optional()
       .describe("Server knowledge timestamp for delta requests"),
+    limit: z
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .describe(
+        "Maximum number of transactions to return (applied client-side). Useful for preventing context overflow with local LLMs."
+      ),
   });
 
   server.registerTool(
     "ynab.getTransactionsByCategory",
     {
       title: "Get transactions by category",
-      description: "Returns all transactions for a specified category",
+      description: "Returns all transactions for a specified category. ⚠️ Can return large payloads - use sinceDate and limit parameters to reduce context size for local LLMs.",
       inputSchema: schema.shape,
     },
-    async (args) => {
+    async (args: any) => {
       try {
         const response = await getTransactionsByCategory(args);
-        return successResult(
-          `Transactions for category ${args.categoryId} in budget ${args.budgetId}`,
-          response
+
+        // Apply client-side limit if specified
+        const { items, truncated, originalCount } = limitResults(
+          response.data.transactions,
+          args.limit
         );
+
+        const limitedResponse = {
+          ...response,
+          data: {
+            ...response.data,
+            transactions: items,
+          },
+        };
+
+        // Generate warning message for large result sets
+        const warning = getResultSizeWarning(
+          items.length,
+          truncated,
+          truncated ? originalCount : undefined
+        );
+
+        const countDisplay = truncated
+          ? `${items.length}/${originalCount} transaction(s)`
+          : `${items.length} transaction(s)`;
+
+        const message = [
+          `Transactions for category ${args.categoryId} in budget ${args.budgetId}: ${countDisplay}`,
+          warning,
+        ].filter(Boolean).join('\n');
+
+        return successResult(message, limitedResponse);
       } catch (error) {
         return errorResult(error);
       }
@@ -427,33 +535,69 @@ export function registerGetTransactionsByPayeeTool(server: McpServer): void {
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional()
       .describe(
-        "Only return transactions on or after this date (ISO format YYYY-MM-DD)"
+        "Only return transactions on or after this date (ISO format YYYY-MM-DD). Recommended to prevent large payloads."
       ),
     type: z
       .enum(["uncategorized", "unapproved"])
       .optional()
-      .describe("Filter by transaction type"),
+      .describe("Filter by transaction type (helps reduce payload size)"),
     lastKnowledgeOfServer: z
       .number()
       .int()
       .optional()
       .describe("Server knowledge timestamp for delta requests"),
+    limit: z
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .describe(
+        "Maximum number of transactions to return (applied client-side). Useful for preventing context overflow with local LLMs."
+      ),
   });
 
   server.registerTool(
     "ynab.getTransactionsByPayee",
     {
       title: "Get transactions by payee",
-      description: "Returns all transactions for a specified payee",
+      description: "Returns all transactions for a specified payee. ⚠️ Can return large payloads - use sinceDate and limit parameters to reduce context size for local LLMs.",
       inputSchema: schema.shape,
     },
-    async (args) => {
+    async (args: any) => {
       try {
         const response = await getTransactionsByPayee(args);
-        return successResult(
-          `Transactions for payee ${args.payeeId} in budget ${args.budgetId}`,
-          response
+
+        // Apply client-side limit if specified
+        const { items, truncated, originalCount } = limitResults(
+          response.data.transactions,
+          args.limit
         );
+
+        const limitedResponse = {
+          ...response,
+          data: {
+            ...response.data,
+            transactions: items,
+          },
+        };
+
+        // Generate warning message for large result sets
+        const warning = getResultSizeWarning(
+          items.length,
+          truncated,
+          truncated ? originalCount : undefined
+        );
+
+        const countDisplay = truncated
+          ? `${items.length}/${originalCount} transaction(s)`
+          : `${items.length} transaction(s)`;
+
+        const message = [
+          `Transactions for payee ${args.payeeId} in budget ${args.budgetId}: ${countDisplay}`,
+          warning,
+        ].filter(Boolean).join('\n');
+
+        return successResult(message, limitedResponse);
       } catch (error) {
         return errorResult(error);
       }
@@ -473,28 +617,64 @@ export function registerGetTransactionsByMonthTool(server: McpServer): void {
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional()
       .describe(
-        "Only return transactions on or after this date (ISO format YYYY-MM-DD)"
+        "Only return transactions on or after this date (ISO format YYYY-MM-DD). Recommended to prevent large payloads."
       ),
     type: z
       .enum(["uncategorized", "unapproved"])
       .optional()
-      .describe("Filter by transaction type"),
+      .describe("Filter by transaction type (helps reduce payload size)"),
+    limit: z
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .describe(
+        "Maximum number of transactions to return (applied client-side). Useful for preventing context overflow with local LLMs."
+      ),
   });
 
   server.registerTool(
     "ynab.getTransactionsByMonth",
     {
       title: "Get transactions by month",
-      description: "Returns all transactions for a specified month",
+      description: "Returns all transactions for a specified month. ⚠️ Can return large payloads for busy months - use sinceDate and limit parameters to reduce context size for local LLMs.",
       inputSchema: schema.shape,
     },
-    async (args) => {
+    async (args: any) => {
       try {
         const response = await getTransactionsByMonth(args);
-        return successResult(
-          `Transactions for month ${args.month} in budget ${args.budgetId}`,
-          response
+
+        // Apply client-side limit if specified
+        const { items, truncated, originalCount } = limitResults(
+          response.data.transactions,
+          args.limit
         );
+
+        const limitedResponse = {
+          ...response,
+          data: {
+            ...response.data,
+            transactions: items,
+          },
+        };
+
+        // Generate warning message for large result sets
+        const warning = getResultSizeWarning(
+          items.length,
+          truncated,
+          truncated ? originalCount : undefined
+        );
+
+        const countDisplay = truncated
+          ? `${items.length}/${originalCount} transaction(s)`
+          : `${items.length} transaction(s)`;
+
+        const message = [
+          `Transactions for month ${args.month} in budget ${args.budgetId}: ${countDisplay}`,
+          warning,
+        ].filter(Boolean).join('\n');
+
+        return successResult(message, limitedResponse);
       } catch (error) {
         return errorResult(error);
       }
