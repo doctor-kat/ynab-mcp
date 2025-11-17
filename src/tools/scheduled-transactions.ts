@@ -52,8 +52,14 @@ export function registerCreateScheduledTransactionTool(
     scheduledTransaction: z
       .object({
         account_id: z.string().describe("Account ID (use ynab.getAccounts to discover)"),
-        date_first: z.string().describe("First occurrence date (ISO format)"),
-        date_next: z.string().describe("Next occurrence date (ISO format)"),
+        date_first: z
+          .string()
+          .default(() => new Date().toISOString().split("T")[0])
+          .describe("First occurrence date (ISO format YYYY-MM-DD). Defaults to today."),
+        date_next: z
+          .string()
+          .default(() => new Date().toISOString().split("T")[0])
+          .describe("Next occurrence date (ISO format YYYY-MM-DD). Defaults to today."),
         frequency: z
           .enum([
             "never",

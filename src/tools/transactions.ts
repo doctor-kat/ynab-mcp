@@ -190,7 +190,10 @@ export function registerGetTransactionsTool(server: McpServer): void {
 export function registerCreateTransactionTool(server: McpServer): void {
   const transactionSchema = z.object({
     account_id: z.string().describe("Account ID (use ynab.getAccounts to discover)"),
-    date: z.string().describe("Transaction date (ISO format)"),
+    date: z
+      .string()
+      .default(() => new Date().toISOString().split("T")[0])
+      .describe("Transaction date (ISO format YYYY-MM-DD). Defaults to today."),
     amount: z.number().int().describe("Transaction amount in milliunits"),
     payee_id: z.string().optional().describe("Payee ID (use ynab.getPayees to discover)"),
     payee_name: z.string().optional().describe("Payee name (for new payee)"),
@@ -198,9 +201,9 @@ export function registerCreateTransactionTool(server: McpServer): void {
     memo: z.string().optional().describe("Transaction memo"),
     cleared: z
       .enum(["cleared", "uncleared", "reconciled"])
-      .optional()
-      .describe("Cleared status"),
-    approved: z.boolean().optional().describe("Approved status"),
+      .default("uncleared")
+      .describe("Cleared status. Defaults to 'uncleared'."),
+    approved: z.boolean().default(false).describe("Approved status. Defaults to false."),
     flag_color: z
       .enum(["red", "orange", "yellow", "green", "blue", "purple", ""])
       .optional()
