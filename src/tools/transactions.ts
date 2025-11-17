@@ -28,6 +28,7 @@ import {
   resolvePayeeId,
 } from "./resolvers.js";
 import { addFormattedAmounts } from "../utils/response-transformer.js";
+import { parseAmount } from "../utils/currency-formatter.js";
 
 export function registerGetTransactionsTool(server: McpServer): void {
   const schema = z.object({
@@ -77,6 +78,18 @@ export function registerGetTransactionsTool(server: McpServer): void {
       .describe(
         "Maximum number of transactions to return (applied client-side). Useful for preventing context overflow with local LLMs.",
       ),
+    minAmount: z
+      .union([z.string(), z.number()])
+      .optional()
+      .describe(
+        "Only return transactions with amounts greater than or equal to this value (applied client-side). Accepts formatted currency strings (e.g., '$50.00') or raw numbers (e.g., 50). For expenses (negative amounts), use negative values (e.g., -50).",
+      ),
+    maxAmount: z
+      .union([z.string(), z.number()])
+      .optional()
+      .describe(
+        "Only return transactions with amounts less than or equal to this value (applied client-side). Accepts formatted currency strings (e.g., '$100.00') or raw numbers (e.g., 100). For expenses (negative amounts), use negative values (e.g., -100).",
+      ),
   });
 
   server.registerTool(
@@ -84,7 +97,7 @@ export function registerGetTransactionsTool(server: McpServer): void {
     {
       title: "Get transactions",
       description:
-        "Retrieve and return transactions for the active budget with optional filters for account, category, payee, or month. Excludes pending transactions. ⚠️ Can return large payloads - use date filters (sinceDate/sinceDaysAgo/sinceRelative) and limit to reduce context size. Date convenience: sinceDaysAgo: 7 (last week), sinceRelative: 'month' (last 30 days).",
+        "Retrieve and return transactions for the active budget with optional filters for account, category, payee, month, or amount. Excludes pending transactions. ⚠️ Can return large payloads - use date filters (sinceDate/sinceDaysAgo/sinceRelative), amount filters (minAmount/maxAmount), and limit to reduce context size. Date convenience: sinceDaysAgo: 7 (last week), sinceRelative: 'month' (last 30 days). Amount filters accept both '$50.00' or 50.",
       inputSchema: schema.shape,
     },
     async (args: any) => {
@@ -140,9 +153,28 @@ export function registerGetTransactionsTool(server: McpServer): void {
           });
         }
 
+        // Apply amount filtering if specified (client-side)
+        let filteredTransactions = response.data.transactions as any;
+        if (args.minAmount !== undefined || args.maxAmount !== undefined) {
+          const currencyFormat = await getCurrencyFormat();
+
+          const minMilliunits = args.minAmount !== undefined
+            ? parseAmount(args.minAmount, currencyFormat)
+            : undefined;
+          const maxMilliunits = args.maxAmount !== undefined
+            ? parseAmount(args.maxAmount, currencyFormat)
+            : undefined;
+
+          filteredTransactions = filteredTransactions.filter((txn: any) => {
+            if (minMilliunits !== undefined && txn.amount < minMilliunits) return false;
+            if (maxMilliunits !== undefined && txn.amount > maxMilliunits) return false;
+            return true;
+          });
+        }
+
         // Apply client-side limit if specified (works with both TransactionDetail[] and HybridTransaction[])
         const { items, truncated, originalCount } = limitResults(
-          response.data.transactions as any,
+          filteredTransactions,
           args.limit,
         );
 
@@ -172,6 +204,12 @@ export function registerGetTransactionsTool(server: McpServer): void {
           context = `category ${args.categoryId} in ${context}`;
         if (args.payeeId) context = `payee ${args.payeeId} in ${context}`;
         if (args.month) context = `month ${args.month} in ${context}`;
+        if (args.minAmount !== undefined || args.maxAmount !== undefined) {
+          const amountFilter = [];
+          if (args.minAmount !== undefined) amountFilter.push(`minAmount: ${args.minAmount}`);
+          if (args.maxAmount !== undefined) amountFilter.push(`maxAmount: ${args.maxAmount}`);
+          context = `${context} (filtered by ${amountFilter.join(", ")})`;
+        }
 
         const message = [
           `Transactions for ${context}: ${countDisplay}`,
