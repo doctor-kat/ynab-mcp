@@ -22,6 +22,11 @@ import {
   resolveDate,
   successResult,
 } from "./utils.js";
+import {
+  resolveAccountId,
+  resolveCategoryId,
+  resolvePayeeId,
+} from "./resolvers.js";
 import { addFormattedAmounts } from "../utils/response-transformer.js";
 
 export function registerGetTransactionsTool(server: McpServer): void {
@@ -188,34 +193,52 @@ export function registerGetTransactionsTool(server: McpServer): void {
 }
 
 export function registerCreateTransactionTool(server: McpServer): void {
-  const transactionSchema = z.object({
-    account_id: z.string().describe("Account ID (use ynab.getAccounts to discover)"),
-    date: z
-      .string()
-      .default(() => new Date().toISOString().split("T")[0])
-      .describe("Transaction date (ISO format YYYY-MM-DD). Defaults to today."),
-    amount: z.number().int().describe("Transaction amount in milliunits"),
-    payee_id: z.string().optional().describe("Payee ID (use ynab.getPayees to discover)"),
-    payee_name: z.string().optional().describe("Payee name (for new payee)"),
-    category_id: z.string().optional().describe("Category ID (use ynab.getCategories to discover)"),
-    memo: z.string().optional().describe("Transaction memo"),
-    cleared: z
-      .enum(["cleared", "uncleared", "reconciled"])
-      .default("uncleared")
-      .describe("Cleared status. Defaults to 'uncleared'."),
-    approved: z.boolean().default(false).describe("Approved status. Defaults to false."),
-    flag_color: z
-      .enum(["red", "orange", "yellow", "green", "blue", "purple", ""])
-      .optional()
-      .describe("Flag color"),
-    import_id: z.string().optional().describe("Import ID for deduplication"),
-  });
+  const transactionSchemaBase = z
+    .object({
+      account_id: z.string().optional().describe("Account ID (use ynab.getAccounts to discover)"),
+      account_name: z.string().optional().describe("Account name (alternative to account_id)"),
+      date: z
+        .string()
+        .default(() => new Date().toISOString().split("T")[0])
+        .describe("Transaction date (ISO format YYYY-MM-DD). Defaults to today."),
+      amount: z.number().int().describe("Transaction amount in milliunits"),
+      payee_id: z.string().optional().describe("Payee ID (use ynab.getPayees to discover)"),
+      payee_name: z.string().optional().describe("Payee name (resolves to existing payee or creates new)"),
+      category_id: z.string().optional().describe("Category ID (use ynab.getCategories to discover)"),
+      category_name: z.string().optional().describe("Category name (alternative to category_id)"),
+      memo: z.string().optional().describe("Transaction memo"),
+      cleared: z
+        .enum(["cleared", "uncleared", "reconciled"])
+        .default("uncleared")
+        .describe("Cleared status. Defaults to 'uncleared'."),
+      approved: z.boolean().default(false).describe("Approved status. Defaults to false."),
+      flag_color: z
+        .enum(["red", "orange", "yellow", "green", "blue", "purple", ""])
+        .optional()
+        .describe("Flag color"),
+      import_id: z.string().optional().describe("Import ID for deduplication"),
+    })
+    .passthrough();
+
+  const transactionSchema = transactionSchemaBase
+    .refine((data) => data.account_id || data.account_name, {
+      message: "Either account_id or account_name must be provided",
+    })
+    .refine((data) => !(data.account_id && data.account_name), {
+      message: "Cannot provide both account_id and account_name",
+    })
+    .refine((data) => !(data.category_id && data.category_name), {
+      message: "Cannot provide both category_id and category_name",
+    })
+    .refine((data) => !(data.payee_id && data.payee_name), {
+      message: "Cannot provide both payee_id and payee_name",
+    });
 
   const schema = z.object({
     data: z
       .object({
-        transaction: transactionSchema.passthrough().optional(),
-        transactions: z.array(transactionSchema.passthrough()).optional(),
+        transaction: transactionSchemaBase.optional(),
+        transactions: z.array(transactionSchemaBase).optional(),
       })
       .refine((data) => !!data.transaction !== !!data.transactions, {
         message: "Provide either 'transaction' or 'transactions', not both",
@@ -238,7 +261,60 @@ export function registerCreateTransactionTool(server: McpServer): void {
 
       try {
         const budgetId = getActiveBudgetIdOrError();
-        const response = await createTransaction({ budgetId, ...args });
+
+        // Helper function to resolve names to IDs for a single transaction
+        const resolveTransaction = async (txn: any) => {
+          const resolved = { ...txn };
+
+          // Resolve account_name to account_id
+          if (txn.account_name) {
+            const accountId = await resolveAccountId(budgetId, txn.account_name);
+            if (!accountId) {
+              throw new Error(`Account not found: ${txn.account_name}`);
+            }
+            resolved.account_id = accountId;
+            delete resolved.account_name;
+          }
+
+          // Resolve category_name to category_id
+          if (txn.category_name) {
+            const categoryId = await resolveCategoryId(budgetId, txn.category_name);
+            if (!categoryId) {
+              throw new Error(`Category not found: ${txn.category_name}`);
+            }
+            resolved.category_id = categoryId;
+            delete resolved.category_name;
+          }
+
+          // Resolve payee_name to payee_id (only if not creating new payee)
+          // If payee_name doesn't resolve, keep it for YNAB to create new payee
+          if (txn.payee_name && !txn.payee_id) {
+            const payeeId = await resolvePayeeId(budgetId, txn.payee_name);
+            if (payeeId) {
+              resolved.payee_id = payeeId;
+              delete resolved.payee_name;
+            }
+            // If not found, keep payee_name to create new payee
+          }
+
+          return resolved;
+        };
+
+        // Resolve names in transaction(s)
+        let resolvedArgs = { ...args };
+        if (args.data.transaction) {
+          resolvedArgs.data = {
+            transaction: await resolveTransaction(args.data.transaction),
+          };
+        } else if (args.data.transactions) {
+          resolvedArgs.data = {
+            transactions: await Promise.all(
+              args.data.transactions.map(resolveTransaction),
+            ),
+          };
+        }
+
+        const response = await createTransaction({ budgetId, ...resolvedArgs });
 
         // Add formatted currency amounts
         const currencyFormat = await getCurrencyFormat();
@@ -264,6 +340,7 @@ export function registerUpdateTransactionsTool(server: McpServer): void {
             id: z.string().optional().describe("Transaction ID"),
             import_id: z.string().optional().describe("Import ID"),
             account_id: z.string().optional().describe("Account ID"),
+            account_name: z.string().optional().describe("Account name (alternative to account_id)"),
             date: z
               .string()
               .optional()
@@ -274,7 +351,9 @@ export function registerUpdateTransactionsTool(server: McpServer): void {
               .optional()
               .describe("Transaction amount in milliunits"),
             payee_id: z.string().optional().describe("Payee ID"),
+            payee_name: z.string().optional().describe("Payee name (resolves to existing payee or creates new)"),
             category_id: z.string().optional().describe("Category ID"),
+            category_name: z.string().optional().describe("Category name (alternative to category_id)"),
             memo: z.string().optional().describe("Transaction memo"),
             cleared: z
               .enum(["cleared", "uncleared", "reconciled"])
@@ -286,7 +365,16 @@ export function registerUpdateTransactionsTool(server: McpServer): void {
               .optional()
               .describe("Flag color"),
           })
-          .passthrough(),
+          .passthrough()
+          .refine((data) => !(data.account_id && data.account_name), {
+            message: "Cannot provide both account_id and account_name",
+          })
+          .refine((data) => !(data.category_id && data.category_name), {
+            message: "Cannot provide both category_id and category_name",
+          })
+          .refine((data) => !(data.payee_id && data.payee_name), {
+            message: "Cannot provide both payee_id and payee_name",
+          }),
       )
       .min(1)
       .describe("Array of transactions to update"),
@@ -306,7 +394,53 @@ export function registerUpdateTransactionsTool(server: McpServer): void {
 
       try {
         const budgetId = getActiveBudgetIdOrError();
-        const response = await updateTransactions({ budgetId, ...args });
+
+        // Helper function to resolve names to IDs for a single transaction
+        const resolveTransaction = async (txn: any) => {
+          const resolved = { ...txn };
+
+          // Resolve account_name to account_id
+          if (txn.account_name) {
+            const accountId = await resolveAccountId(budgetId, txn.account_name);
+            if (!accountId) {
+              throw new Error(`Account not found: ${txn.account_name}`);
+            }
+            resolved.account_id = accountId;
+            delete resolved.account_name;
+          }
+
+          // Resolve category_name to category_id
+          if (txn.category_name) {
+            const categoryId = await resolveCategoryId(budgetId, txn.category_name);
+            if (!categoryId) {
+              throw new Error(`Category not found: ${txn.category_name}`);
+            }
+            resolved.category_id = categoryId;
+            delete resolved.category_name;
+          }
+
+          // Resolve payee_name to payee_id (only if not creating new payee)
+          if (txn.payee_name && !txn.payee_id) {
+            const payeeId = await resolvePayeeId(budgetId, txn.payee_name);
+            if (payeeId) {
+              resolved.payee_id = payeeId;
+              delete resolved.payee_name;
+            }
+            // If not found, keep payee_name to create new payee
+          }
+
+          return resolved;
+        };
+
+        // Resolve names in all transactions
+        const resolvedTransactions = await Promise.all(
+          args.transactions.map(resolveTransaction),
+        );
+
+        const response = await updateTransactions({
+          budgetId,
+          transactions: resolvedTransactions,
+        });
 
         // Add formatted currency amounts
         const currencyFormat = await getCurrencyFormat();

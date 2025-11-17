@@ -18,14 +18,16 @@ import type { SaveSubTransaction } from "../api/index.js";
 import { addFormattedAmounts } from "../utils/response-transformer.js";
 import { categoryStore, payeeStore } from "../cache/index.js";
 import { formatMilliunits } from "../utils/currency-formatter.js";
+import { resolveCategoryId } from "./resolvers.js";
 
 /**
  * Stage a categorization change without applying it
  */
 export function registerStageCategorizationTool(server: McpServer): void {
-  const schema = z.object({
+  const schemaBase = z.object({
     transactionId: z.string().min(1).describe("The transaction ID (use ynab.getTransactions to discover)"),
-    categoryId: z.string().describe("The category ID to assign (use ynab.getCategories to discover)"),
+    categoryId: z.string().optional().describe("The category ID to assign (use ynab.getCategories to discover)"),
+    categoryName: z.string().optional().describe("The category name to assign (alternative to categoryId)"),
     memo: z.string().optional().describe("Optional memo to update"),
     description: z
       .string()
@@ -33,17 +35,37 @@ export function registerStageCategorizationTool(server: McpServer): void {
       .describe("Human-readable description of this change"),
   });
 
+  const schema = schemaBase
+    .refine((data) => data.categoryId || data.categoryName, {
+      message: "Either categoryId or categoryName must be provided",
+    })
+    .refine((data) => !(data.categoryId && data.categoryName), {
+      message: "Cannot provide both categoryId and categoryName",
+    });
+
+  type SchemaType = z.infer<typeof schemaBase>;
+
   server.registerTool(
     "ynab.stageCategorization",
     {
       title: "Stage transaction categorization",
       description:
         "Stage a category change for review without immediately applying it to YNAB for the active budget. Use ynab.reviewChanges to inspect and ynab.applyChanges to commit.",
-      inputSchema: schema.shape,
+      inputSchema: schemaBase.shape,
     },
-    async (args) => {
+    async (args: SchemaType) => {
       try {
         const budgetId = getActiveBudgetIdOrError();
+
+        // Resolve category name to ID if provided
+        let categoryId = args.categoryId;
+        if (args.categoryName) {
+          const resolvedId = await resolveCategoryId(budgetId, args.categoryName);
+          if (!resolvedId) {
+            return errorResult(new Error(`Category not found: ${args.categoryName}`));
+          }
+          categoryId = resolvedId;
+        }
 
         // Fetch current transaction state
         const currentTx = await getTransactionById({
@@ -60,13 +82,13 @@ export function registerStageCategorizationTool(server: McpServer): void {
           transactionId: args.transactionId,
           description:
             args.description ||
-            `Categorize transaction to category ${args.categoryId}`,
+            `Categorize transaction to category ${categoryId}`,
           originalTransaction: {
             category_id: transaction.category_id,
             memo: transaction.memo,
           },
           proposedChanges: {
-            category_id: args.categoryId,
+            category_id: categoryId,
             memo: args.memo,
           },
         });
@@ -94,7 +116,7 @@ export function registerStageCategorizationTool(server: McpServer): void {
         // Build human-readable summary
         const formattedAmount = formatMilliunits(transaction.amount, currencyFormat);
         const fromCategory = findCategoryName(transaction.category_id);
-        const toCategory = findCategoryName(args.categoryId);
+        const toCategory = findCategoryName(categoryId);
 
         const summary = `Staged: ${payeeName} (${formattedAmount}) - Category: ${fromCategory} → ${toCategory}`;
 
@@ -116,7 +138,7 @@ export function registerStageCategorizationTool(server: McpServer): void {
               memo: transaction.memo,
             },
             proposedState: {
-              category_id: args.categoryId,
+              category_id: categoryId,
               category_name: toCategory,
               memo: args.memo || transaction.memo,
             },
@@ -137,16 +159,21 @@ export function registerStageSplitTool(server: McpServer): void {
     transactionId: z.string().min(1).describe("The transaction ID (use ynab.getTransactions to discover)"),
     subtransactions: z
       .array(
-        z.object({
-          amount: z
-            .number()
-            .int()
-            .describe("Amount in milliunits (e.g., -12340 for -$12.34)"),
-          payee_id: z.string().optional().describe("Payee ID (use ynab.getPayees to discover)"),
-          payee_name: z.string().optional().describe("Payee name"),
-          category_id: z.string().optional().describe("Category ID (use ynab.getCategories to discover)"),
-          memo: z.string().optional().describe("Memo"),
-        }),
+        z
+          .object({
+            amount: z
+              .number()
+              .int()
+              .describe("Amount in milliunits (e.g., -12340 for -$12.34)"),
+            payee_id: z.string().optional().describe("Payee ID (use ynab.getPayees to discover)"),
+            payee_name: z.string().optional().describe("Payee name"),
+            category_id: z.string().optional().describe("Category ID (use ynab.getCategories to discover)"),
+            category_name: z.string().optional().describe("Category name (alternative to category_id)"),
+            memo: z.string().optional().describe("Memo"),
+          })
+          .refine((data) => !(data.category_id && data.category_name), {
+            message: "Cannot provide both category_id and category_name",
+          }),
       )
       .min(2)
       .describe("Array of subtransactions (must sum to total amount)"),
@@ -176,8 +203,24 @@ export function registerStageSplitTool(server: McpServer): void {
 
         const transaction = currentTx.data.transaction;
 
+        // Resolve category names in subtransactions
+        const resolvedSubtransactions = await Promise.all(
+          args.subtransactions.map(async (sub) => {
+            const resolved = { ...sub };
+            if (sub.category_name) {
+              const categoryId = await resolveCategoryId(budgetId, sub.category_name);
+              if (!categoryId) {
+                throw new Error(`Category not found: ${sub.category_name}`);
+              }
+              resolved.category_id = categoryId;
+              delete resolved.category_name;
+            }
+            return resolved;
+          }),
+        );
+
         // Validate subtransactions sum
-        const total = args.subtransactions.reduce(
+        const total = resolvedSubtransactions.reduce(
           (sum, sub) => sum + sub.amount,
           0,
         );
@@ -196,14 +239,14 @@ export function registerStageSplitTool(server: McpServer): void {
           transactionId: args.transactionId,
           description:
             args.description ||
-            `Split transaction into ${args.subtransactions.length} parts`,
+            `Split transaction into ${resolvedSubtransactions.length} parts`,
           originalTransaction: {
             category_id: transaction.category_id,
             subtransactions:
               transaction.subtransactions as SaveSubTransaction[],
           },
           proposedChanges: {
-            subtransactions: args.subtransactions,
+            subtransactions: resolvedSubtransactions,
           },
         });
 
@@ -233,7 +276,7 @@ export function registerStageSplitTool(server: McpServer): void {
         const transactionPayeeName = findPayeeName(transaction.payee_id, transaction.payee_name);
 
         // Format subtransactions with enriched data
-        const enrichedSubtransactions = args.subtransactions.map(sub => ({
+        const enrichedSubtransactions = resolvedSubtransactions.map(sub => ({
           amount: sub.amount,
           formattedAmount: formatMilliunits(sub.amount, currencyFormat),
           category_id: sub.category_id,
@@ -248,7 +291,7 @@ export function registerStageSplitTool(server: McpServer): void {
           .map(sub => `  - ${sub.formattedAmount} → ${sub.category_name}`)
           .join("\n");
 
-        const summary = `Staged split: ${transactionPayeeName} (${formattedAmount}) → ${args.subtransactions.length} parts\n${splitSummary}`;
+        const summary = `Staged split: ${transactionPayeeName} (${formattedAmount}) → ${resolvedSubtransactions.length} parts\n${splitSummary}`;
 
         return successResult(
           `✅ ${summary}\n\nChange ID: ${stagedChange.id}`,
