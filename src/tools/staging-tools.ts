@@ -8,6 +8,7 @@ import { stagingStore, ChangeType } from "../staging/index.js";
 import { getTransactionById, updateTransactions } from "../api/index.js";
 import {
   errorResult,
+  getActiveBudgetIdOrError,
   isReadOnly,
   readOnlyResult,
   successResult,
@@ -19,9 +20,8 @@ import type { SaveSubTransaction } from "../api/index.js";
  */
 export function registerStageCategorizationTool(server: McpServer): void {
   const schema = z.object({
-    budgetId: z.string().min(1).describe("The budget ID"),
-    transactionId: z.string().min(1).describe("The transaction ID"),
-    categoryId: z.string().describe("The category ID to assign"),
+    transactionId: z.string().min(1).describe("The transaction ID (use ynab.getTransactions to discover)"),
+    categoryId: z.string().describe("The category ID to assign (use ynab.getCategories to discover)"),
     memo: z.string().optional().describe("Optional memo to update"),
     description: z
       .string()
@@ -34,14 +34,16 @@ export function registerStageCategorizationTool(server: McpServer): void {
     {
       title: "Stage transaction categorization",
       description:
-        "Stage a category change for review without immediately applying it to YNAB. Use ynab.reviewChanges to inspect and ynab.applyChanges to commit. Requires budgetId (use ynab.getBudgetContext to get your budgetId), transactionId (use ynab.getTransactions if needed), and categoryId (use ynab.getCategories if needed).",
+        "Stage a category change for review without immediately applying it to YNAB for the active budget. Use ynab.reviewChanges to inspect and ynab.applyChanges to commit.",
       inputSchema: schema.shape,
     },
     async (args) => {
       try {
+        const budgetId = getActiveBudgetIdOrError();
+
         // Fetch current transaction state
         const currentTx = await getTransactionById({
-          budgetId: args.budgetId,
+          budgetId,
           transactionId: args.transactionId,
         });
 
@@ -50,7 +52,7 @@ export function registerStageCategorizationTool(server: McpServer): void {
         // Stage the change
         const stagedChange = stagingStore.getState().stageChange({
           type: ChangeType.CATEGORIZATION,
-          budgetId: args.budgetId,
+          budgetId,
           transactionId: args.transactionId,
           description:
             args.description ||
@@ -93,8 +95,7 @@ export function registerStageCategorizationTool(server: McpServer): void {
  */
 export function registerStageSplitTool(server: McpServer): void {
   const schema = z.object({
-    budgetId: z.string().min(1).describe("The budget ID"),
-    transactionId: z.string().min(1).describe("The transaction ID"),
+    transactionId: z.string().min(1).describe("The transaction ID (use ynab.getTransactions to discover)"),
     subtransactions: z
       .array(
         z.object({
@@ -102,9 +103,9 @@ export function registerStageSplitTool(server: McpServer): void {
             .number()
             .int()
             .describe("Amount in milliunits (e.g., -12340 for -$12.34)"),
-          payee_id: z.string().optional().describe("Payee ID"),
+          payee_id: z.string().optional().describe("Payee ID (use ynab.getPayees to discover)"),
           payee_name: z.string().optional().describe("Payee name"),
-          category_id: z.string().optional().describe("Category ID"),
+          category_id: z.string().optional().describe("Category ID (use ynab.getCategories to discover)"),
           memo: z.string().optional().describe("Memo"),
         }),
       )
@@ -121,14 +122,16 @@ export function registerStageSplitTool(server: McpServer): void {
     {
       title: "Stage transaction split",
       description:
-        "Stage a transaction split into multiple subtransactions for review without immediately applying it. Subtransactions must sum to the total transaction amount. Use ynab.reviewChanges to inspect and ynab.applyChanges to commit. Requires budgetId (use ynab.getBudgetContext to get your budgetId) and transactionId (use ynab.getTransactions if needed). For category_id and payee_id values in subtransactions, use ynab.getCategories or ynab.getPayees.",
+        "Stage a transaction split into multiple subtransactions for review without immediately applying it for the active budget. Subtransactions must sum to the total transaction amount. Use ynab.reviewChanges to inspect and ynab.applyChanges to commit.",
       inputSchema: schema.shape,
     },
     async (args) => {
       try {
+        const budgetId = getActiveBudgetIdOrError();
+
         // Fetch current transaction state
         const currentTx = await getTransactionById({
-          budgetId: args.budgetId,
+          budgetId,
           transactionId: args.transactionId,
         });
 
@@ -150,7 +153,7 @@ export function registerStageSplitTool(server: McpServer): void {
         // Stage the change
         const stagedChange = stagingStore.getState().stageChange({
           type: ChangeType.SPLIT,
-          budgetId: args.budgetId,
+          budgetId,
           transactionId: args.transactionId,
           description:
             args.description ||

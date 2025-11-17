@@ -12,7 +12,9 @@
       "Bash(pnpm test:*)",
       "Bash(pnpm exec tsx:*)",
       "Bash(pnpm install:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(pnpm list:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

@@ -6,29 +6,27 @@ import {
   updateMonthCategory,
 } from "../api/index.js";
 import { categoryStore } from "../cache/index.js";
-import { errorResult, isReadOnly, readOnlyResult, successResult } from "./utils.js";
+import { errorResult, isReadOnly, readOnlyResult, successResult, getActiveBudgetIdOrError } from "./utils.js";
 
 export function registerGetCategoriesTool(server: McpServer): void {
-  const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
-  });
+  const schema = z.object({});
 
   server.registerTool(
     "ynab.getCategories",
     {
       title: "Get categories",
       description:
-        "Retrieve and return all categories grouped by category group. " +
+        "Retrieve and return all categories grouped by category group for the active budget. " +
         "Uses cached data with delta requests for optimal performance. " +
-        "Amounts are specific to the current budget month (UTC). " +
-        "Use ynab.getBudgetContext to get your budgetId.",
+        "Amounts are specific to the current budget month (UTC).",
       inputSchema: schema.shape,
     },
-    async (args) => {
+    async () => {
       try {
-        const category_groups = await categoryStore.getState().getCategories(args.budgetId);
+        const budgetId = getActiveBudgetIdOrError();
+        const category_groups = await categoryStore.getState().getCategories(budgetId);
         return successResult(
-          `Categories for budget ${args.budgetId}`,
+          `Categories for budget ${budgetId}`,
           { data: { category_groups } },
         );
       } catch (error) {
@@ -40,8 +38,7 @@ export function registerGetCategoriesTool(server: McpServer): void {
 
 export function registerUpdateCategoryTool(server: McpServer): void {
   const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
-    categoryId: z.string().min(1).describe("The ID of the category"),
+    categoryId: z.string().min(1).describe("The ID of the category (use ynab.getCategories to discover)"),
     category: z
       .object({
         name: z.string().optional().describe("New category name"),
@@ -79,7 +76,7 @@ export function registerUpdateCategoryTool(server: McpServer): void {
     "ynab.updateCategory",
     {
       title: "Update category",
-      description: "Update a category. Requires budgetId (use ynab.getBudgetContext to get your budgetId) and categoryId (use ynab.getCategories if needed).",
+      description: "Update a category in the active budget.",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -88,11 +85,12 @@ export function registerUpdateCategoryTool(server: McpServer): void {
       }
 
       try {
-        const response = await updateCategory(args);
+        const budgetId = getActiveBudgetIdOrError();
+        const response = await updateCategory({ budgetId, ...args });
         // Invalidate cache after write operation
-        categoryStore.getState().invalidate(args.budgetId);
+        categoryStore.getState().invalidate(budgetId);
         return successResult(
-          `Category ${args.categoryId} updated in budget ${args.budgetId}`,
+          `Category ${args.categoryId} updated in budget ${budgetId}`,
           response,
         );
       } catch (error) {
@@ -104,27 +102,27 @@ export function registerUpdateCategoryTool(server: McpServer): void {
 
 export function registerGetMonthCategoryByIdTool(server: McpServer): void {
   const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
     month: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .describe("The budget month in ISO format (YYYY-MM-DD)"),
-    categoryId: z.string().min(1).describe("The ID of the category"),
+    categoryId: z.string().min(1).describe("The ID of the category (use ynab.getCategories to discover)"),
   });
 
   server.registerTool(
-    "ynab.getMonthCategoryById",
+    "ynab.getMonthCategory",
     {
-      title: "Get month category by ID",
+      title: "Get month category",
       description:
-        "Retrieve and return a single category for a specific budget month. Amounts are specific to that month. Requires budgetId (use ynab.getBudgetContext to get your budgetId) and categoryId (use ynab.getCategories if needed).",
+        "Retrieve and return a single category for a specific budget month in the active budget. Amounts are specific to that month.",
       inputSchema: schema.shape,
     },
     async (args) => {
       try {
-        const response = await getMonthCategoryById(args);
+        const budgetId = getActiveBudgetIdOrError();
+        const response = await getMonthCategoryById({ budgetId, ...args });
         return successResult(
-          `Category ${args.categoryId} for month ${args.month} in budget ${args.budgetId}`,
+          `Category ${args.categoryId} for month ${args.month} in budget ${budgetId}`,
           response,
         );
       } catch (error) {
@@ -136,12 +134,11 @@ export function registerGetMonthCategoryByIdTool(server: McpServer): void {
 
 export function registerUpdateMonthCategoryTool(server: McpServer): void {
   const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
     month: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .describe("The budget month in ISO format (YYYY-MM-DD)"),
-    categoryId: z.string().min(1).describe("The ID of the category"),
+    categoryId: z.string().min(1).describe("The ID of the category (use ynab.getCategories to discover)"),
     category: z
       .object({
         budgeted: z.number().int().describe("Budgeted amount in milliunits"),
@@ -155,7 +152,7 @@ export function registerUpdateMonthCategoryTool(server: McpServer): void {
     {
       title: "Update month category",
       description:
-        "Update a category for a specific month. Only budgeted amount can be updated. Requires budgetId (use ynab.getBudgetContext to get your budgetId) and categoryId (use ynab.getCategories if needed).",
+        "Update a category for a specific month in the active budget. Only budgeted amount can be updated.",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -164,9 +161,10 @@ export function registerUpdateMonthCategoryTool(server: McpServer): void {
       }
 
       try {
-        const response = await updateMonthCategory(args);
+        const budgetId = getActiveBudgetIdOrError();
+        const response = await updateMonthCategory({ budgetId, ...args });
         return successResult(
-          `Category ${args.categoryId} updated for month ${args.month} in budget ${args.budgetId}`,
+          `Category ${args.categoryId} updated for month ${args.month} in budget ${budgetId}`,
           response,
         );
       } catch (error) {

@@ -6,11 +6,10 @@ import {
   getScheduledTransactions,
   updateScheduledTransaction,
 } from "../api/index.js";
-import { errorResult, isReadOnly, readOnlyResult, successResult } from "./utils.js";
+import { errorResult, isReadOnly, readOnlyResult, successResult, getActiveBudgetIdOrError } from "./utils.js";
 
 export function registerGetScheduledTransactionsTool(server: McpServer): void {
   const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
     lastKnowledgeOfServer: z
       .number()
       .int()
@@ -22,14 +21,15 @@ export function registerGetScheduledTransactionsTool(server: McpServer): void {
     "ynab.getScheduledTransactions",
     {
       title: "Get scheduled transactions",
-      description: "Retrieve and return all scheduled transactions. Use ynab.getBudgetContext to get your budgetId.",
+      description: "Retrieve and return all scheduled transactions for the active budget.",
       inputSchema: schema.shape,
     },
     async (args) => {
       try {
-        const response = await getScheduledTransactions(args);
+        const budgetId = getActiveBudgetIdOrError();
+        const response = await getScheduledTransactions({ budgetId, ...args });
         return successResult(
-          `Scheduled transactions for budget ${args.budgetId}`,
+          `Scheduled transactions for budget ${budgetId}`,
           response,
         );
       } catch (error) {
@@ -43,10 +43,9 @@ export function registerCreateScheduledTransactionTool(
   server: McpServer,
 ): void {
   const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
     scheduledTransaction: z
       .object({
-        account_id: z.string().describe("Account ID"),
+        account_id: z.string().describe("Account ID (use ynab.getAccounts to discover)"),
         date_first: z.string().describe("First occurrence date (ISO format)"),
         date_next: z.string().describe("Next occurrence date (ISO format)"),
         frequency: z
@@ -67,8 +66,8 @@ export function registerCreateScheduledTransactionTool(
           ])
           .describe("Frequency of scheduled transaction"),
         amount: z.number().int().describe("Transaction amount in milliunits"),
-        payee_id: z.string().optional().describe("Payee ID"),
-        category_id: z.string().optional().describe("Category ID"),
+        payee_id: z.string().optional().describe("Payee ID (use ynab.getPayees to discover)"),
+        category_id: z.string().optional().describe("Category ID (use ynab.getCategories to discover)"),
         memo: z.string().optional().describe("Transaction memo"),
         flag_color: z
           .enum(["red", "orange", "yellow", "green", "blue", "purple", ""])
@@ -84,7 +83,7 @@ export function registerCreateScheduledTransactionTool(
     {
       title: "Create scheduled transaction",
       description:
-        "Create a single scheduled transaction (a transaction with a future date). Requires budgetId (use ynab.getBudgetContext to get your budgetId) and account_id (use ynab.getAccounts if needed). For category_id and payee_id, use ynab.getCategories or ynab.getPayees.",
+        "Create a single scheduled transaction (a transaction with a future date) in the active budget.",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -93,9 +92,10 @@ export function registerCreateScheduledTransactionTool(
       }
 
       try {
-        const response = await createScheduledTransaction(args);
+        const budgetId = getActiveBudgetIdOrError();
+        const response = await createScheduledTransaction({ budgetId, ...args });
         return successResult(
-          `Scheduled transaction created in budget ${args.budgetId}`,
+          `Scheduled transaction created in budget ${budgetId}`,
           response,
         );
       } catch (error) {
@@ -109,11 +109,10 @@ export function registerUpdateScheduledTransactionTool(
   server: McpServer,
 ): void {
   const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
     scheduledTransactionId: z
       .string()
       .min(1)
-      .describe("The ID of the scheduled transaction"),
+      .describe("The ID of the scheduled transaction (use ynab.getScheduledTransactions to discover)"),
     scheduledTransaction: z
       .object({
         account_id: z.string().optional().describe("Account ID"),
@@ -164,7 +163,7 @@ export function registerUpdateScheduledTransactionTool(
     "ynab.updateScheduledTransaction",
     {
       title: "Update scheduled transaction",
-      description: "Update a single scheduled transaction. Requires budgetId (use ynab.getBudgetContext to get your budgetId) and scheduledTransactionId (use ynab.getScheduledTransactions if needed).",
+      description: "Update a single scheduled transaction in the active budget.",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -173,9 +172,10 @@ export function registerUpdateScheduledTransactionTool(
       }
 
       try {
-        const response = await updateScheduledTransaction(args);
+        const budgetId = getActiveBudgetIdOrError();
+        const response = await updateScheduledTransaction({ budgetId, ...args });
         return successResult(
-          `Scheduled transaction ${args.scheduledTransactionId} updated in budget ${args.budgetId}`,
+          `Scheduled transaction ${args.scheduledTransactionId} updated in budget ${budgetId}`,
           response,
         );
       } catch (error) {
@@ -189,18 +189,17 @@ export function registerDeleteScheduledTransactionTool(
   server: McpServer,
 ): void {
   const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
     scheduledTransactionId: z
       .string()
       .min(1)
-      .describe("The ID of the scheduled transaction"),
+      .describe("The ID of the scheduled transaction (use ynab.getScheduledTransactions to discover)"),
   });
 
   server.registerTool(
     "ynab.deleteScheduledTransaction",
     {
       title: "Delete scheduled transaction",
-      description: "Delete a scheduled transaction. Requires budgetId (use ynab.getBudgetContext to get your budgetId) and scheduledTransactionId (use ynab.getScheduledTransactions if needed).",
+      description: "Delete a scheduled transaction from the active budget.",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -209,9 +208,10 @@ export function registerDeleteScheduledTransactionTool(
       }
 
       try {
-        const response = await deleteScheduledTransaction(args);
+        const budgetId = getActiveBudgetIdOrError();
+        const response = await deleteScheduledTransaction({ budgetId, ...args });
         return successResult(
-          `Scheduled transaction ${args.scheduledTransactionId} deleted from budget ${args.budgetId}`,
+          `Scheduled transaction ${args.scheduledTransactionId} deleted from budget ${budgetId}`,
           response,
         );
       } catch (error) {

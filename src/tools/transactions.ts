@@ -13,6 +13,7 @@ import {
 } from "../api/index.js";
 import {
   errorResult,
+  getActiveBudgetIdOrError,
   getResultSizeWarning,
   isReadOnly,
   limitResults,
@@ -22,10 +23,9 @@ import {
 
 export function registerGetTransactionsTool(server: McpServer): void {
   const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
-    accountId: z.string().optional().describe("Filter by account ID"),
-    categoryId: z.string().optional().describe("Filter by category ID"),
-    payeeId: z.string().optional().describe("Filter by payee ID"),
+    accountId: z.string().optional().describe("Filter by account ID (use ynab.getAccounts to discover)"),
+    categoryId: z.string().optional().describe("Filter by category ID (use ynab.getCategories to discover)"),
+    payeeId: z.string().optional().describe("Filter by payee ID (use ynab.getPayees to discover)"),
     month: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -62,16 +62,18 @@ export function registerGetTransactionsTool(server: McpServer): void {
     {
       title: "Get transactions",
       description:
-        "Retrieve and return budget transactions with optional filters for account, category, payee, or month. Excludes pending transactions. ⚠️ Can return large payloads - use sinceDate and limit parameters to reduce context size for local LLMs. Use ynab.getBudgetContext to get your budgetId. To discover accountId, categoryId, or payeeId values, use ynab.getAccounts, ynab.getCategories, or ynab.getPayees respectively.",
+        "Retrieve and return transactions for the active budget with optional filters for account, category, payee, or month. Excludes pending transactions. ⚠️ Can return large payloads - use sinceDate and limit parameters to reduce context size for local LLMs.",
       inputSchema: schema.shape,
     },
     async (args: any) => {
       try {
+        const budgetId = getActiveBudgetIdOrError();
+
         // Use specialized endpoint if specific filter is provided
         let response: any;
         if (args.accountId) {
           response = await getTransactionsByAccount({
-            budgetId: args.budgetId,
+            budgetId,
             accountId: args.accountId,
             sinceDate: args.sinceDate,
             type: args.type,
@@ -79,7 +81,7 @@ export function registerGetTransactionsTool(server: McpServer): void {
           });
         } else if (args.categoryId) {
           response = await getTransactionsByCategory({
-            budgetId: args.budgetId,
+            budgetId,
             categoryId: args.categoryId,
             sinceDate: args.sinceDate,
             type: args.type,
@@ -87,7 +89,7 @@ export function registerGetTransactionsTool(server: McpServer): void {
           });
         } else if (args.payeeId) {
           response = await getTransactionsByPayee({
-            budgetId: args.budgetId,
+            budgetId,
             payeeId: args.payeeId,
             sinceDate: args.sinceDate,
             type: args.type,
@@ -95,14 +97,14 @@ export function registerGetTransactionsTool(server: McpServer): void {
           });
         } else if (args.month) {
           response = await getTransactionsByMonth({
-            budgetId: args.budgetId,
+            budgetId,
             month: args.month,
             sinceDate: args.sinceDate,
             type: args.type,
           });
         } else {
           response = await getTransactions({
-            budgetId: args.budgetId,
+            budgetId,
             sinceDate: args.sinceDate,
             type: args.type,
             lastKnowledgeOfServer: args.lastKnowledgeOfServer,
@@ -135,7 +137,7 @@ export function registerGetTransactionsTool(server: McpServer): void {
           : `${items.length} transaction(s)`;
 
         // Build context-specific message
-        let context = `budget ${args.budgetId}`;
+        let context = `budget ${budgetId}`;
         if (args.accountId) context = `account ${args.accountId} in ${context}`;
         if (args.categoryId)
           context = `category ${args.categoryId} in ${context}`;
@@ -159,12 +161,12 @@ export function registerGetTransactionsTool(server: McpServer): void {
 
 export function registerCreateTransactionTool(server: McpServer): void {
   const transactionSchema = z.object({
-    account_id: z.string().describe("Account ID"),
+    account_id: z.string().describe("Account ID (use ynab.getAccounts to discover)"),
     date: z.string().describe("Transaction date (ISO format)"),
     amount: z.number().int().describe("Transaction amount in milliunits"),
-    payee_id: z.string().optional().describe("Payee ID"),
+    payee_id: z.string().optional().describe("Payee ID (use ynab.getPayees to discover)"),
     payee_name: z.string().optional().describe("Payee name (for new payee)"),
-    category_id: z.string().optional().describe("Category ID"),
+    category_id: z.string().optional().describe("Category ID (use ynab.getCategories to discover)"),
     memo: z.string().optional().describe("Transaction memo"),
     cleared: z
       .enum(["cleared", "uncleared", "reconciled"])
@@ -179,7 +181,6 @@ export function registerCreateTransactionTool(server: McpServer): void {
   });
 
   const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
     data: z
       .object({
         transaction: transactionSchema.passthrough().optional(),
@@ -196,7 +197,7 @@ export function registerCreateTransactionTool(server: McpServer): void {
     {
       title: "Create transaction",
       description:
-        "Create a single transaction or multiple transactions. Scheduled transactions cannot be created on this endpoint. Requires budgetId (use ynab.getBudgetContext to get your budgetId) and account_id (use ynab.getAccounts if needed). For category_id and payee_id, use ynab.getCategories or ynab.getPayees.",
+        "Create a single transaction or multiple transactions in the active budget. Scheduled transactions cannot be created on this endpoint.",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -205,9 +206,10 @@ export function registerCreateTransactionTool(server: McpServer): void {
       }
 
       try {
-        const response = await createTransaction(args);
+        const budgetId = getActiveBudgetIdOrError();
+        const response = await createTransaction({ budgetId, ...args });
         return successResult(
-          `Transaction(s) created in budget ${args.budgetId}`,
+          `Transaction(s) created in budget ${budgetId}`,
           response,
         );
       } catch (error) {
@@ -219,7 +221,6 @@ export function registerCreateTransactionTool(server: McpServer): void {
 
 export function registerUpdateTransactionsTool(server: McpServer): void {
   const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
     transactions: z
       .array(
         z
@@ -259,7 +260,7 @@ export function registerUpdateTransactionsTool(server: McpServer): void {
     "ynab.updateTransactions",
     {
       title: "Update transactions",
-      description: "Update multiple transactions by id or import_id. Requires budgetId (use ynab.getBudgetContext to get your budgetId). To get transaction IDs, use ynab.getTransactions. For category_id and payee_id values, use ynab.getCategories or ynab.getPayees.",
+      description: "Update multiple transactions by id or import_id in the active budget.",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -268,9 +269,10 @@ export function registerUpdateTransactionsTool(server: McpServer): void {
       }
 
       try {
-        const response = await updateTransactions(args);
+        const budgetId = getActiveBudgetIdOrError();
+        const response = await updateTransactions({ budgetId, ...args });
         return successResult(
-          `${args.transactions.length} transaction(s) updated in budget ${args.budgetId}`,
+          `${args.transactions.length} transaction(s) updated in budget ${budgetId}`,
           response,
         );
       } catch (error) {
@@ -281,27 +283,26 @@ export function registerUpdateTransactionsTool(server: McpServer): void {
 }
 
 export function registerImportTransactionsTool(server: McpServer): void {
-  const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
-  });
+  const schema = z.object({});
 
   server.registerTool(
     "ynab.importTransactions",
     {
       title: "Import transactions",
       description:
-        'Import available transactions on all linked accounts. Equivalent to clicking "Import" on each account. Requires budgetId (use ynab.getBudgetContext to get your budgetId).',
+        'Import available transactions on all linked accounts for the active budget. Equivalent to clicking "Import" on each account.',
       inputSchema: schema.shape,
     },
-    async (args) => {
+    async () => {
       if (isReadOnly()) {
         return readOnlyResult();
       }
 
       try {
-        const response = await importTransactions(args);
+        const budgetId = getActiveBudgetIdOrError();
+        const response = await importTransactions({ budgetId });
         return successResult(
-          `Transactions imported for budget ${args.budgetId}`,
+          `Transactions imported for budget ${budgetId}`,
           response,
         );
       } catch (error) {
@@ -313,15 +314,14 @@ export function registerImportTransactionsTool(server: McpServer): void {
 
 export function registerDeleteTransactionTool(server: McpServer): void {
   const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
-    transactionId: z.string().min(1).describe("The ID of the transaction"),
+    transactionId: z.string().min(1).describe("The ID of the transaction (use ynab.getTransactions to discover)"),
   });
 
   server.registerTool(
     "ynab.deleteTransaction",
     {
       title: "Delete transaction",
-      description: "Delete a transaction. Requires budgetId (use ynab.getBudgetContext to get your budgetId) and transactionId (use ynab.getTransactions if needed).",
+      description: "Delete a transaction from the active budget.",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -330,9 +330,10 @@ export function registerDeleteTransactionTool(server: McpServer): void {
       }
 
       try {
-        const response = await deleteTransaction(args);
+        const budgetId = getActiveBudgetIdOrError();
+        const response = await deleteTransaction({ budgetId, ...args });
         return successResult(
-          `Transaction ${args.transactionId} deleted from budget ${args.budgetId}`,
+          `Transaction ${args.transactionId} deleted from budget ${budgetId}`,
           response,
         );
       } catch (error) {

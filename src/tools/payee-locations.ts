@@ -1,25 +1,24 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { getPayeeLocations, getPayeeLocationsByPayee } from "../api/index.js";
-import { errorResult, successResult } from "./utils.js";
+import { errorResult, successResult, getActiveBudgetIdOrError } from "./utils.js";
 
 export function registerGetPayeeLocationsTool(server: McpServer): void {
-  const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
-  });
+  const schema = z.object({});
 
   server.registerTool(
     "ynab.getPayeeLocations",
     {
       title: "Get payee locations",
-      description: "Retrieve and return all payee locations for a budget. Use ynab.getBudgetContext to get your budgetId.",
+      description: "Retrieve and return all payee locations for the active budget.",
       inputSchema: schema.shape,
     },
-    async (args) => {
+    async () => {
       try {
-        const response = await getPayeeLocations(args);
+        const budgetId = getActiveBudgetIdOrError();
+        const response = await getPayeeLocations({ budgetId });
         return successResult(
-          `Payee locations for budget ${args.budgetId}`,
+          `Payee locations for budget ${budgetId}`,
           response,
         );
       } catch (error) {
@@ -31,22 +30,22 @@ export function registerGetPayeeLocationsTool(server: McpServer): void {
 
 export function registerGetPayeeLocationsByPayeeTool(server: McpServer): void {
   const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
-    payeeId: z.string().min(1).describe("The ID of the payee"),
+    payeeId: z.string().min(1).describe("The ID of the payee (use ynab.getPayees to discover)"),
   });
 
   server.registerTool(
     "ynab.getPayeeLocationsByPayee",
     {
       title: "Get payee locations by payee",
-      description: "Retrieve and return all payee locations for a specific payee. Requires budgetId (use ynab.getBudgetContext to get your budgetId) and payeeId (use ynab.getPayees if needed).",
+      description: "Retrieve and return all payee locations for a specific payee in the active budget.",
       inputSchema: schema.shape,
     },
     async (args) => {
       try {
-        const response = await getPayeeLocationsByPayee(args);
+        const budgetId = getActiveBudgetIdOrError();
+        const response = await getPayeeLocationsByPayee({ budgetId, ...args });
         return successResult(
-          `Payee locations for payee ${args.payeeId} in budget ${args.budgetId}`,
+          `Payee locations for payee ${args.payeeId} in budget ${budgetId}`,
           response,
         );
       } catch (error) {

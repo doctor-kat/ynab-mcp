@@ -2,27 +2,25 @@ import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { createAccount } from "../api/index.js";
 import { accountStore } from "../cache/index.js";
-import { errorResult, isReadOnly, readOnlyResult, successResult } from "./utils.js";
+import { errorResult, isReadOnly, readOnlyResult, successResult, getActiveBudgetIdOrError } from "./utils.js";
 
 export function registerGetAccountsTool(server: McpServer): void {
-  const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
-  });
+  const schema = z.object({});
 
   server.registerTool(
     "ynab.getAccounts",
     {
       title: "Get accounts",
       description:
-        "Retrieve and return all accounts for a budget. " +
-        "Uses cached data with delta requests for optimal performance. " +
-        "Use ynab.getBudgetContext to get your budgetId.",
+        "Retrieve and return all accounts for the active budget. " +
+        "Uses cached data with delta requests for optimal performance.",
       inputSchema: schema.shape,
     },
-    async (args) => {
+    async () => {
       try {
-        const accounts = await accountStore.getState().getAccounts(args.budgetId);
-        return successResult(`Accounts for budget ${args.budgetId}`, { data: { accounts } });
+        const budgetId = getActiveBudgetIdOrError();
+        const accounts = await accountStore.getState().getAccounts(budgetId);
+        return successResult(`Accounts for budget ${budgetId}`, { data: { accounts } });
       } catch (error) {
         return errorResult(error);
       }
@@ -32,7 +30,6 @@ export function registerGetAccountsTool(server: McpServer): void {
 
 export function registerCreateAccountTool(server: McpServer): void {
   const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
     account: z
       .object({
         name: z.string().describe("Account name"),
@@ -66,7 +63,7 @@ export function registerCreateAccountTool(server: McpServer): void {
     "ynab.createAccount",
     {
       title: "Create account",
-      description: "Create a new account in the specified budget. Requires budgetId (use ynab.getBudgetContext to get your budgetId).",
+      description: "Create a new account in the active budget.",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -75,11 +72,12 @@ export function registerCreateAccountTool(server: McpServer): void {
       }
 
       try {
-        const response = await createAccount(args);
+        const budgetId = getActiveBudgetIdOrError();
+        const response = await createAccount({ budgetId, ...args });
         // Invalidate cache after write operation
-        accountStore.getState().invalidate(args.budgetId);
+        accountStore.getState().invalidate(budgetId);
         return successResult(
-          `Account created in budget ${args.budgetId}`,
+          `Account created in budget ${budgetId}`,
           response,
         );
       } catch (error) {

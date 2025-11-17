@@ -82,12 +82,14 @@ import { getBudgets, updateTransaction } from './api';
 // List all budgets
 const budgets = await getBudgets({ includeAccounts: true });
 
-// Update a transaction
+// Update a transaction (API layer requires budgetId)
 const result = await updateTransaction({
   budgetId: 'abc123',
   transactionId: 'xyz789',
   transaction: { category_id: 'cat456' }
 });
+
+// Note: MCP tools automatically use the active budget, so budgetId is not required
 ```
 
 ### MCP Tools:
@@ -154,9 +156,8 @@ The server implements a **stage-review-apply workflow** for transaction modifica
 
 #### Example Usage:
 ```typescript
-// 1. Stage a categorization
+// 1. Stage a categorization (uses active budget automatically)
 const staged = await ynab.stageCategorization({
-  budgetId: "abc123",
   transactionId: "txn-456",
   categoryId: "cat-789",
   description: "Categorize grocery purchase"
@@ -183,14 +184,17 @@ The server implements a **budget context cache** to minimize API calls and impro
 - **ONE** API call at server startup to fetch all budgets
 - **ZERO** API calls for subsequent budget context operations
 - Cached data includes budget metadata (name, currency format, date format, etc.)
-- Automatic active budget selection for single-budget users
+- **Automatic active budget selection**: First budget is automatically set as active
+- **No budgetId required**: All tools automatically use the active budget
 
 #### How It Works:
 
 1. **Initialization**: At server startup, the budget context calls `getBudgets()` once and caches all budget information
-2. **Auto-set Active Budget**: If the user has exactly one budget, it's automatically set as the active budget
+2. **Auto-set Active Budget**: The first budget is automatically set as the active budget
 3. **Cached Lookups**: All budget context queries use cached data (no API calls)
-4. **Manual Refresh**: Users can explicitly refresh the cache if budgets are added/removed
+4. **Implicit Budget Usage**: All tools use the active budget automatically - no budgetId parameter needed
+5. **Manual Switch**: Use `ynab.setActiveBudget` to switch between budgets (for multi-budget users)
+6. **Manual Refresh**: Users can explicitly refresh the cache if budgets are added/removed
 
 #### Available Tools:
 
@@ -198,12 +202,14 @@ The server implements a **budget context cache** to minimize API calls and impro
 - Returns cached budget information (ZERO API calls)
 - Shows all available budgets with metadata
 - Displays currently active budget ID and name
-- Use this to discover budgetId values for other tools
+- Useful for understanding which budget is being used
+- Note: You don't need to call this before other tools - the active budget is already set
 
 **`ynab.setActiveBudget`**
-- Sets the active budget in the context (ZERO API calls)
+- Switches the active budget (ZERO API calls)
 - Validates budgetId against cached budgets
-- Useful for multi-budget users to track working context
+- Required only for multi-budget users who want to switch between budgets
+- Takes a budgetId parameter (use `ynab.getBudgetContext` to see available budgets)
 
 **`ynab.refreshBudgetContext`**
 - Refreshes the cache by calling the YNAB API (ONE API call)
@@ -212,25 +218,29 @@ The server implements a **budget context cache** to minimize API calls and impro
 
 #### LLM Workflow:
 
-For LLMs (especially local models), this system provides an efficient way to get budget IDs:
+For LLMs, the system is designed to be zero-friction:
 
 ```typescript
-// Step 1: Get budget context from cache (no API call)
-const context = await ynab.getBudgetContext();
-// Returns: { budgets: [...], activeBudgetId: "budget-123", ... }
-
-// Step 2: Use the budgetId in other tools
+// Just call tools directly - active budget is used automatically
 const transactions = await ynab.getTransactions({
-  budgetId: context.activeBudgetId,  // or select from context.budgets
+  sinceDate: "2025-01-01"
+});
+
+// No need to call getBudgetContext first!
+
+// For multi-budget users, switch budgets when needed:
+await ynab.setActiveBudget({ budgetId: "other-budget-id" });
+const otherTransactions = await ynab.getTransactions({
   sinceDate: "2025-01-01"
 });
 ```
 
 #### Benefits:
 - **Performance**: Eliminates repeated `getBudgets()` calls (saves 100s of API calls per session)
-- **Simplicity**: Single-budget users get their budgetId instantly
+- **Simplicity**: Zero-parameter tools - no budgetId required for 95% of operations
 - **Efficiency**: All budget metadata cached for fast lookups
-- **LLM-friendly**: Reduces token usage by avoiding redundant API responses
+- **LLM-friendly**: Eliminates chained tool calls - single call for most operations
+- **Auto-initialization**: First budget is active by default - works immediately
 
 #### Implementation Details:
 - **Zustand store pattern**: Uses Zustand vanilla stores for state management
@@ -265,7 +275,7 @@ The server implements **delta-based caching** for frequently accessed reference 
 4. **Update Cache**: Merged data replaces cache, new `server_knowledge` stored
 5. **Fallback**: On API errors, stale cache data is returned when available
 
-Example delta merge for payees:
+Example delta merge for payees (internal implementation):
 ```typescript
 // Initial fetch: Get all payees (server_knowledge: 100)
 const payees1 = await payeeStore.getState().getPayees(budgetId);
@@ -275,6 +285,8 @@ const payees1 = await payeeStore.getState().getPayees(budgetId);
 const payees2 = await payeeStore.getState().getPayees(budgetId);
 // API returns: [payee-1 (updated), payee-3 (new), payee-4 (deleted flag)]
 // Merged cache: [payee-1 (updated), payee-2 (unchanged), payee-3 (new)]
+
+// Note: MCP tools call these store methods automatically using the active budget
 ```
 
 #### Available Cache Management Tools:

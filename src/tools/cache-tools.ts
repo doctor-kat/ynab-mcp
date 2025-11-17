@@ -2,32 +2,31 @@ import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { payeeStore, categoryStore, accountStore, settingsStore } from "../cache/index.js";
 import { budgetStore } from "../budget/index.js";
-import { errorResult, successResult } from "./utils.js";
+import { errorResult, successResult, getActiveBudgetIdOrError } from "./utils.js";
 
 /**
  * Register the refreshPayeeCache tool
  */
 export function registerRefreshPayeeCacheTool(server: McpServer): void {
-  const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
-  });
+  const schema = z.object({});
 
   server.registerTool(
     "ynab.refreshPayeeCache",
     {
       title: "Refresh payee cache",
       description:
-        "Force refresh the payee cache for a budget by fetching the latest data from the YNAB API. " +
+        "Force refresh the payee cache for the active budget by fetching the latest data from the YNAB API. " +
         "This invalidates and re-fetches all payees. " +
         "Use this if payees have been added/modified outside this server session.",
       inputSchema: schema.shape,
     },
-    async (args) => {
+    async () => {
       try {
-        await payeeStore.getState().refreshCache(args.budgetId);
+        const budgetId = getActiveBudgetIdOrError();
+        await payeeStore.getState().refreshCache(budgetId);
         return successResult(
-          `Payee cache refreshed for budget ${args.budgetId}`,
-          { budgetId: args.budgetId },
+          `Payee cache refreshed for budget ${budgetId}`,
+          { budgetId },
         );
       } catch (error) {
         return errorResult(error);
@@ -40,26 +39,25 @@ export function registerRefreshPayeeCacheTool(server: McpServer): void {
  * Register the refreshCategoryCache tool
  */
 export function registerRefreshCategoryCacheTool(server: McpServer): void {
-  const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
-  });
+  const schema = z.object({});
 
   server.registerTool(
     "ynab.refreshCategoryCache",
     {
       title: "Refresh category cache",
       description:
-        "Force refresh the category cache for a budget by fetching the latest data from the YNAB API. " +
+        "Force refresh the category cache for the active budget by fetching the latest data from the YNAB API. " +
         "This invalidates and re-fetches all categories. " +
         "Use this if categories have been added/modified outside this server session.",
       inputSchema: schema.shape,
     },
-    async (args) => {
+    async () => {
       try {
-        await categoryStore.getState().refreshCache(args.budgetId);
+        const budgetId = getActiveBudgetIdOrError();
+        await categoryStore.getState().refreshCache(budgetId);
         return successResult(
-          `Category cache refreshed for budget ${args.budgetId}`,
-          { budgetId: args.budgetId },
+          `Category cache refreshed for budget ${budgetId}`,
+          { budgetId },
         );
       } catch (error) {
         return errorResult(error);
@@ -72,26 +70,25 @@ export function registerRefreshCategoryCacheTool(server: McpServer): void {
  * Register the refreshAccountCache tool
  */
 export function registerRefreshAccountCacheTool(server: McpServer): void {
-  const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
-  });
+  const schema = z.object({});
 
   server.registerTool(
     "ynab.refreshAccountCache",
     {
       title: "Refresh account cache",
       description:
-        "Force refresh the account cache for a budget by fetching the latest data from the YNAB API. " +
+        "Force refresh the account cache for the active budget by fetching the latest data from the YNAB API. " +
         "This invalidates and re-fetches all accounts. " +
         "Use this if accounts have been added/modified outside this server session.",
       inputSchema: schema.shape,
     },
-    async (args) => {
+    async () => {
       try {
-        await accountStore.getState().refreshCache(args.budgetId);
+        const budgetId = getActiveBudgetIdOrError();
+        await accountStore.getState().refreshCache(budgetId);
         return successResult(
-          `Account cache refreshed for budget ${args.budgetId}`,
-          { budgetId: args.budgetId },
+          `Account cache refreshed for budget ${budgetId}`,
+          { budgetId },
         );
       } catch (error) {
         return errorResult(error);
@@ -104,26 +101,25 @@ export function registerRefreshAccountCacheTool(server: McpServer): void {
  * Register the refreshSettingsCache tool
  */
 export function registerRefreshSettingsCacheTool(server: McpServer): void {
-  const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
-  });
+  const schema = z.object({});
 
   server.registerTool(
     "ynab.refreshSettingsCache",
     {
       title: "Refresh settings cache",
       description:
-        "Force refresh the budget settings cache for a budget by fetching the latest data from the YNAB API. " +
+        "Force refresh the budget settings cache for the active budget by fetching the latest data from the YNAB API. " +
         "This invalidates and re-fetches budget settings (currency format, date format). " +
         "Settings are cached for 24 hours by default.",
       inputSchema: schema.shape,
     },
-    async (args) => {
+    async () => {
       try {
-        await settingsStore.getState().refreshCache(args.budgetId);
+        const budgetId = getActiveBudgetIdOrError();
+        await settingsStore.getState().refreshCache(budgetId);
         return successResult(
-          `Settings cache refreshed for budget ${args.budgetId}`,
-          { budgetId: args.budgetId },
+          `Settings cache refreshed for budget ${budgetId}`,
+          { budgetId },
         );
       } catch (error) {
         return errorResult(error);

@@ -1,11 +1,10 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { getBudgetMonth, getBudgetMonths } from "../api/index.js";
-import { errorResult, successResult } from "./utils.js";
+import { errorResult, successResult, getActiveBudgetIdOrError } from "./utils.js";
 
 export function registerGetBudgetMonthsTool(server: McpServer): void {
   const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
     lastKnowledgeOfServer: z
       .number()
       .int()
@@ -17,14 +16,15 @@ export function registerGetBudgetMonthsTool(server: McpServer): void {
     "ynab.getBudgetMonths",
     {
       title: "Get budget months",
-      description: "Retrieve and return all budget months. Use ynab.getBudgetContext to get your budgetId.",
+      description: "Retrieve and return all budget months for the active budget.",
       inputSchema: schema.shape,
     },
     async (args) => {
       try {
-        const response = await getBudgetMonths(args);
+        const budgetId = getActiveBudgetIdOrError();
+        const response = await getBudgetMonths({ budgetId, ...args });
         return successResult(
-          `Budget months for budget ${args.budgetId}`,
+          `Budget months for budget ${budgetId}`,
           response,
         );
       } catch (error) {
@@ -36,7 +36,6 @@ export function registerGetBudgetMonthsTool(server: McpServer): void {
 
 export function registerGetBudgetMonthTool(server: McpServer): void {
   const schema = z.object({
-    budgetId: z.string().min(1).describe("The ID of the budget"),
     month: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -47,14 +46,15 @@ export function registerGetBudgetMonthTool(server: McpServer): void {
     "ynab.getBudgetMonth",
     {
       title: "Get budget month",
-      description: "Retrieve and return a single budget month. Requires budgetId (use ynab.getBudgetContext to get your budgetId).",
+      description: "Retrieve and return a single budget month for the active budget.",
       inputSchema: schema.shape,
     },
     async (args) => {
       try {
-        const response = await getBudgetMonth(args);
+        const budgetId = getActiveBudgetIdOrError();
+        const response = await getBudgetMonth({ budgetId, ...args });
         return successResult(
-          `Budget month ${args.month} for budget ${args.budgetId}`,
+          `Budget month ${args.month} for budget ${budgetId}`,
           response,
         );
       } catch (error) {

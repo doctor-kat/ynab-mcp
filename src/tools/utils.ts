@@ -1,5 +1,31 @@
 import { YnabApiError } from "../api/errors.js";
 import { loadEnv } from "../env.js";
+import { budgetStore } from "../budget/index.js";
+
+/**
+ * Get the active budget ID or throw an error with helpful guidance
+ * @throws Error if no active budget is set
+ */
+export function getActiveBudgetIdOrError(): string {
+  const budgetId = budgetStore.getState().getActiveBudgetId();
+
+  if (!budgetId) {
+    const budgets = budgetStore.getState().getAllBudgets();
+
+    if (budgets.length === 0) {
+      throw new Error(
+        "No budgets found in your YNAB account. Please check your YNAB account or refresh the budget context using ynab.refreshBudgetContext."
+      );
+    } else {
+      const budgetList = budgets.map(b => `${b.name} (${b.id})`).join(", ");
+      throw new Error(
+        `No active budget set. Available budgets: ${budgetList}. Use ynab.setActiveBudget to select one.`
+      );
+    }
+  }
+
+  return budgetId;
+}
 
 /**
  * Check if the server is in read-only mode
@@ -42,17 +68,7 @@ export function successResult(title: string, data: unknown): any {
 
 export function errorResult(error: unknown): any {
   if (error instanceof YnabApiError) {
-    // Check if this is a budget-related error
-    const isBudgetError =
-      error.status === 404 &&
-      (error.message.toLowerCase().includes('budget') ||
-       JSON.stringify(error.details).toLowerCase().includes('budget'));
-
-    let errorMessage = `❌ YNAB API error (${error.status}): ${error.message}`;
-
-    if (isBudgetError) {
-      errorMessage += `\n\n💡 To get your budgetId, use ynab.getBudgetContext. If you have multiple budgets, use ynab.setActiveBudget to set the active one.`;
-    }
+    const errorMessage = `❌ YNAB API error (${error.status}): ${error.message}`;
 
     return {
       content: [

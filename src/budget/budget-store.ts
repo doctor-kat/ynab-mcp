@@ -110,8 +110,8 @@ export const budgetStore = createStore<BudgetState & BudgetActions>()((set, get)
         });
       }
 
-      // Auto-set active budget if user has exactly one budget
-      const activeBudgetId = budgets.length === 1 ? budgets[0].id : null;
+      // Auto-set first budget as active (if any budgets exist)
+      const activeBudgetId = budgets.length > 0 ? budgets[0].id : null;
 
       // Update state immutably
       set({

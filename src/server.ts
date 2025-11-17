@@ -45,9 +45,7 @@ export async function startServer(env: Env = loadEnv()): Promise<void> {
   await budgetStore.getState().initialize();
   const context = budgetStore.getState().getBudgetContext();
   if (context.activeBudgetId) {
-    console.info(`✓ Auto-set active budget: ${context.activeBudgetName} (${context.activeBudgetId})`);
-  } else if (context.budgets.length > 1) {
-    console.info(`✓ Found ${context.budgets.length} budgets (no active budget set)`);
+    console.info(`✓ Active budget: ${context.activeBudgetName} (${context.activeBudgetId})`);
   } else if (context.budgets.length === 0) {
     console.warn("⚠ No budgets found");
   }
