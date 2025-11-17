@@ -134,6 +134,49 @@ export function getDaysAgo(days: number): string {
 }
 
 /**
+ * Resolve date parameters to ISO format (YYYY-MM-DD)
+ * Supports multiple input formats for convenience:
+ * - sinceDate: explicit ISO date string
+ * - sinceDaysAgo: number of days in the past
+ * - sinceRelative: common time periods (week, month, quarter, year)
+ *
+ * Priority: sinceDate > sinceDaysAgo > sinceRelative
+ *
+ * @returns ISO date string or undefined if no date parameter provided
+ */
+export function resolveDate(params: {
+  sinceDate?: string;
+  sinceDaysAgo?: number;
+  sinceRelative?: "week" | "month" | "quarter" | "year";
+}): string | undefined {
+  // Explicit date takes priority
+  if (params.sinceDate) {
+    return params.sinceDate;
+  }
+
+  // Days ago is next priority
+  if (params.sinceDaysAgo !== undefined) {
+    return getDaysAgo(params.sinceDaysAgo);
+  }
+
+  // Relative period is last
+  if (params.sinceRelative) {
+    switch (params.sinceRelative) {
+      case "week":
+        return getDaysAgo(7);
+      case "month":
+        return getDaysAgo(30);
+      case "quarter":
+        return getDaysAgo(90);
+      case "year":
+        return getDaysAgo(365);
+    }
+  }
+
+  return undefined;
+}
+
+/**
  * Limit array results and return metadata about truncation
  */
 export function limitResults<T>(

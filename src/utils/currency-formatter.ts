@@ -43,8 +43,8 @@ export function formatMilliunits(
   milliunits: number,
   currencyFormat: CurrencyFormat | null | undefined,
 ): string {
-  // Use default format if null/undefined
-  const format = currencyFormat ?? DEFAULT_CURRENCY_FORMAT;
+  // Use default format if null/undefined (guaranteed non-null after this)
+  const format = (currencyFormat ?? DEFAULT_CURRENCY_FORMAT) as Exclude<CurrencyFormat, null>;
 
   // Convert milliunits to base currency amount
   // YNAB uses milliunits: 1000 milliunits = 1 currency unit
@@ -64,6 +64,7 @@ export function formatMilliunits(
     formatterCache.set(format.iso_code, formatter);
   }
 
+  // formatter is guaranteed non-null after the if block
   return formatter.format(amount);
 }
 

@@ -19,6 +19,7 @@ import {
   isReadOnly,
   limitResults,
   readOnlyResult,
+  resolveDate,
   successResult,
 } from "./utils.js";
 import { addFormattedAmounts } from "../utils/response-transformer.js";
@@ -39,6 +40,20 @@ export function registerGetTransactionsTool(server: McpServer): void {
       .optional()
       .describe(
         "Only return transactions on or after this date (ISO format YYYY-MM-DD). Recommended to prevent large payloads.",
+      ),
+    sinceDaysAgo: z
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .describe(
+        "Only return transactions from the last N days (convenience parameter, alternative to sinceDate). Example: 7 for last week, 30 for last month.",
+      ),
+    sinceRelative: z
+      .enum(["week", "month", "quarter", "year"])
+      .optional()
+      .describe(
+        "Only return transactions from a relative time period (convenience parameter, alternative to sinceDate). Options: week (7 days), month (30 days), quarter (90 days), year (365 days).",
       ),
     type: z
       .enum(["uncategorized", "unapproved"])
@@ -64,12 +79,19 @@ export function registerGetTransactionsTool(server: McpServer): void {
     {
       title: "Get transactions",
       description:
-        "Retrieve and return transactions for the active budget with optional filters for account, category, payee, or month. Excludes pending transactions. ⚠️ Can return large payloads - use sinceDate and limit parameters to reduce context size for local LLMs.",
+        "Retrieve and return transactions for the active budget with optional filters for account, category, payee, or month. Excludes pending transactions. ⚠️ Can return large payloads - use date filters (sinceDate/sinceDaysAgo/sinceRelative) and limit to reduce context size. Date convenience: sinceDaysAgo: 7 (last week), sinceRelative: 'month' (last 30 days).",
       inputSchema: schema.shape,
     },
     async (args: any) => {
       try {
         const budgetId = getActiveBudgetIdOrError();
+
+        // Resolve date parameters to ISO format
+        const sinceDate = resolveDate({
+          sinceDate: args.sinceDate,
+          sinceDaysAgo: args.sinceDaysAgo,
+          sinceRelative: args.sinceRelative,
+        });
 
         // Use specialized endpoint if specific filter is provided
         let response: any;
@@ -77,7 +99,7 @@ export function registerGetTransactionsTool(server: McpServer): void {
           response = await getTransactionsByAccount({
             budgetId,
             accountId: args.accountId,
-            sinceDate: args.sinceDate,
+            sinceDate,
             type: args.type,
             lastKnowledgeOfServer: args.lastKnowledgeOfServer,
           });
@@ -85,7 +107,7 @@ export function registerGetTransactionsTool(server: McpServer): void {
           response = await getTransactionsByCategory({
             budgetId,
             categoryId: args.categoryId,
-            sinceDate: args.sinceDate,
+            sinceDate,
             type: args.type,
             lastKnowledgeOfServer: args.lastKnowledgeOfServer,
           });
@@ -93,7 +115,7 @@ export function registerGetTransactionsTool(server: McpServer): void {
           response = await getTransactionsByPayee({
             budgetId,
             payeeId: args.payeeId,
-            sinceDate: args.sinceDate,
+            sinceDate,
             type: args.type,
             lastKnowledgeOfServer: args.lastKnowledgeOfServer,
           });
@@ -101,13 +123,13 @@ export function registerGetTransactionsTool(server: McpServer): void {
           response = await getTransactionsByMonth({
             budgetId,
             month: args.month,
-            sinceDate: args.sinceDate,
+            sinceDate,
             type: args.type,
           });
         } else {
           response = await getTransactions({
             budgetId,
-            sinceDate: args.sinceDate,
+            sinceDate,
             type: args.type,
             lastKnowledgeOfServer: args.lastKnowledgeOfServer,
           });
