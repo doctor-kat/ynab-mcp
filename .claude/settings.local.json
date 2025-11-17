@@ -11,7 +11,8 @@
       "Bash(timeout 2 pnpm start:*)",
       "Bash(pnpm test:*)",
       "Bash(pnpm exec tsx:*)",
-      "Bash(pnpm install:*)"
+      "Bash(pnpm install:*)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []
