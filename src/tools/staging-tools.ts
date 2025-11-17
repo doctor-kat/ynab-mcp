@@ -9,11 +9,13 @@ import { getTransactionById, updateTransactions } from "../api/index.js";
 import {
   errorResult,
   getActiveBudgetIdOrError,
+  getCurrencyFormat,
   isReadOnly,
   readOnlyResult,
   successResult,
 } from "./utils.js";
 import type { SaveSubTransaction } from "../api/index.js";
+import { addFormattedAmounts } from "../utils/response-transformer.js";
 
 /**
  * Stage a categorization change without applying it
@@ -240,12 +242,19 @@ export function registerReviewChangesTool(server: McpServer): void {
           )
           .join("\n");
 
-        return successResult(
-          `📋 ${changes.length} staged change(s):\n\n${summary}\n\nUse ynab.applyChanges to commit these changes to YNAB.`,
+        // Add formatted currency amounts to change details
+        const currencyFormat = await getCurrencyFormat();
+        const formattedData = addFormattedAmounts(
           {
             count: changes.length,
             changes: changeDetails,
           },
+          currencyFormat,
+        );
+
+        return successResult(
+          `📋 ${changes.length} staged change(s):\n\n${summary}\n\nUse ynab.applyChanges to commit these changes to YNAB.`,
+          formattedData,
         );
       } catch (error) {
         return errorResult(error);

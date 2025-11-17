@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { getBudgetMonth, getBudgetMonths } from "../api/index.js";
-import { errorResult, successResult, getActiveBudgetIdOrError } from "./utils.js";
+import { errorResult, successResult, getActiveBudgetIdOrError, getCurrencyFormat } from "./utils.js";
+import { addFormattedAmounts } from "../utils/response-transformer.js";
 
 export function registerGetBudgetMonthsTool(server: McpServer): void {
   const schema = z.object({
@@ -23,9 +24,14 @@ export function registerGetBudgetMonthsTool(server: McpServer): void {
       try {
         const budgetId = getActiveBudgetIdOrError();
         const response = await getBudgetMonths({ budgetId, ...args });
+
+        // Add formatted currency amounts
+        const currencyFormat = await getCurrencyFormat();
+        const formattedResponse = addFormattedAmounts(response, currencyFormat);
+
         return successResult(
           `Budget months for budget ${budgetId}`,
-          response,
+          formattedResponse,
         );
       } catch (error) {
         return errorResult(error);
@@ -53,9 +59,14 @@ export function registerGetBudgetMonthTool(server: McpServer): void {
       try {
         const budgetId = getActiveBudgetIdOrError();
         const response = await getBudgetMonth({ budgetId, ...args });
+
+        // Add formatted currency amounts
+        const currencyFormat = await getCurrencyFormat();
+        const formattedResponse = addFormattedAmounts(response, currencyFormat);
+
         return successResult(
           `Budget month ${args.month} for budget ${budgetId}`,
-          response,
+          formattedResponse,
         );
       } catch (error) {
         return errorResult(error);

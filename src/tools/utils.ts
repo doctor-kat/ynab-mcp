@@ -1,6 +1,8 @@
 import { YnabApiError } from "../api/errors.js";
 import { loadEnv } from "../env.js";
 import { budgetStore } from "../budget/index.js";
+import { settingsStore } from "../cache/index.js";
+import type { CurrencyFormat } from "../api/common/CurrencyFormat.js";
 
 /**
  * Get the active budget ID or throw an error with helpful guidance
@@ -25,6 +27,17 @@ export function getActiveBudgetIdOrError(): string {
   }
 
   return budgetId;
+}
+
+/**
+ * Get the currency format for the active budget
+ * Used for formatting milliunits to currency strings
+ * @returns CurrencyFormat from the active budget settings
+ */
+export async function getCurrencyFormat(): Promise<CurrencyFormat> {
+  const budgetId = getActiveBudgetIdOrError();
+  const settings = await settingsStore.getState().getSettings(budgetId);
+  return settings.currency_format;
 }
 
 /**

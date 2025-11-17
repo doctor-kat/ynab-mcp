@@ -5,7 +5,7 @@ import { loadEnv } from "./env.js";
 import { initializeClient } from "./api/index.js";
 import { registerTools } from "./tools/index.js";
 import { budgetStore } from "./budget/index.js";
-import { payeeStore, categoryStore, accountStore } from "./cache/index.js";
+import { payeeStore, categoryStore, accountStore, settingsStore } from "./cache/index.js";
 
 export interface ServerBundle {
   server: McpServer;
@@ -56,6 +56,7 @@ export async function startServer(env: Env = loadEnv()): Promise<void> {
     payeeStore.getState().initialize(),
     categoryStore.getState().initialize(),
     accountStore.getState().initialize(),
+    settingsStore.getState().initialize(),
   ]);
   console.info("✓ Reference data caches initialized");
 

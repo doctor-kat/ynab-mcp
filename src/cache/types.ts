@@ -165,6 +165,11 @@ export interface SettingsActions {
   invalidate: (budgetId: string) => void;
 
   /**
+   * Initialize cache for active budget
+   */
+  initialize: () => Promise<void>;
+
+  /**
    * Refresh cache for a budget
    */
   refreshCache: (budgetId: string) => Promise<void>;

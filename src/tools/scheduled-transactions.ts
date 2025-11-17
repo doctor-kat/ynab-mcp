@@ -6,7 +6,8 @@ import {
   getScheduledTransactions,
   updateScheduledTransaction,
 } from "../api/index.js";
-import { errorResult, isReadOnly, readOnlyResult, successResult, getActiveBudgetIdOrError } from "./utils.js";
+import { errorResult, isReadOnly, readOnlyResult, successResult, getActiveBudgetIdOrError, getCurrencyFormat } from "./utils.js";
+import { addFormattedAmounts } from "../utils/response-transformer.js";
 
 export function registerGetScheduledTransactionsTool(server: McpServer): void {
   const schema = z.object({
@@ -28,9 +29,14 @@ export function registerGetScheduledTransactionsTool(server: McpServer): void {
       try {
         const budgetId = getActiveBudgetIdOrError();
         const response = await getScheduledTransactions({ budgetId, ...args });
+
+        // Add formatted currency amounts
+        const currencyFormat = await getCurrencyFormat();
+        const formattedResponse = addFormattedAmounts(response, currencyFormat);
+
         return successResult(
           `Scheduled transactions for budget ${budgetId}`,
-          response,
+          formattedResponse,
         );
       } catch (error) {
         return errorResult(error);
@@ -94,9 +100,14 @@ export function registerCreateScheduledTransactionTool(
       try {
         const budgetId = getActiveBudgetIdOrError();
         const response = await createScheduledTransaction({ budgetId, ...args });
+
+        // Add formatted currency amounts
+        const currencyFormat = await getCurrencyFormat();
+        const formattedResponse = addFormattedAmounts(response, currencyFormat);
+
         return successResult(
           `Scheduled transaction created in budget ${budgetId}`,
-          response,
+          formattedResponse,
         );
       } catch (error) {
         return errorResult(error);
@@ -174,9 +185,14 @@ export function registerUpdateScheduledTransactionTool(
       try {
         const budgetId = getActiveBudgetIdOrError();
         const response = await updateScheduledTransaction({ budgetId, ...args });
+
+        // Add formatted currency amounts
+        const currencyFormat = await getCurrencyFormat();
+        const formattedResponse = addFormattedAmounts(response, currencyFormat);
+
         return successResult(
           `Scheduled transaction ${args.scheduledTransactionId} updated in budget ${budgetId}`,
-          response,
+          formattedResponse,
         );
       } catch (error) {
         return errorResult(error);
@@ -210,9 +226,14 @@ export function registerDeleteScheduledTransactionTool(
       try {
         const budgetId = getActiveBudgetIdOrError();
         const response = await deleteScheduledTransaction({ budgetId, ...args });
+
+        // Add formatted currency amounts
+        const currencyFormat = await getCurrencyFormat();
+        const formattedResponse = addFormattedAmounts(response, currencyFormat);
+
         return successResult(
           `Scheduled transaction ${args.scheduledTransactionId} deleted from budget ${budgetId}`,
-          response,
+          formattedResponse,
         );
       } catch (error) {
         return errorResult(error);

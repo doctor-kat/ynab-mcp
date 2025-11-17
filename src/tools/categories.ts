@@ -6,7 +6,8 @@ import {
   updateMonthCategory,
 } from "../api/index.js";
 import { categoryStore } from "../cache/index.js";
-import { errorResult, isReadOnly, readOnlyResult, successResult, getActiveBudgetIdOrError } from "./utils.js";
+import { errorResult, isReadOnly, readOnlyResult, successResult, getActiveBudgetIdOrError, getCurrencyFormat } from "./utils.js";
+import { addFormattedAmounts } from "../utils/response-transformer.js";
 
 export function registerGetCategoriesTool(server: McpServer): void {
   const schema = z.object({});
@@ -25,9 +26,14 @@ export function registerGetCategoriesTool(server: McpServer): void {
       try {
         const budgetId = getActiveBudgetIdOrError();
         const category_groups = await categoryStore.getState().getCategories(budgetId);
+
+        // Add formatted currency amounts
+        const currencyFormat = await getCurrencyFormat();
+        const formattedResponse = addFormattedAmounts({ data: { category_groups } }, currencyFormat);
+
         return successResult(
           `Categories for budget ${budgetId}`,
-          { data: { category_groups } },
+          formattedResponse,
         );
       } catch (error) {
         return errorResult(error);
@@ -89,9 +95,14 @@ export function registerUpdateCategoryTool(server: McpServer): void {
         const response = await updateCategory({ budgetId, ...args });
         // Invalidate cache after write operation
         categoryStore.getState().invalidate(budgetId);
+
+        // Add formatted currency amounts
+        const currencyFormat = await getCurrencyFormat();
+        const formattedResponse = addFormattedAmounts(response, currencyFormat);
+
         return successResult(
           `Category ${args.categoryId} updated in budget ${budgetId}`,
-          response,
+          formattedResponse,
         );
       } catch (error) {
         return errorResult(error);
@@ -121,9 +132,14 @@ export function registerGetMonthCategoryByIdTool(server: McpServer): void {
       try {
         const budgetId = getActiveBudgetIdOrError();
         const response = await getMonthCategoryById({ budgetId, ...args });
+
+        // Add formatted currency amounts
+        const currencyFormat = await getCurrencyFormat();
+        const formattedResponse = addFormattedAmounts(response, currencyFormat);
+
         return successResult(
           `Category ${args.categoryId} for month ${args.month} in budget ${budgetId}`,
-          response,
+          formattedResponse,
         );
       } catch (error) {
         return errorResult(error);
@@ -163,9 +179,14 @@ export function registerUpdateMonthCategoryTool(server: McpServer): void {
       try {
         const budgetId = getActiveBudgetIdOrError();
         const response = await updateMonthCategory({ budgetId, ...args });
+
+        // Add formatted currency amounts
+        const currencyFormat = await getCurrencyFormat();
+        const formattedResponse = addFormattedAmounts(response, currencyFormat);
+
         return successResult(
           `Category ${args.categoryId} updated for month ${args.month} in budget ${budgetId}`,
-          response,
+          formattedResponse,
         );
       } catch (error) {
         return errorResult(error);

@@ -416,6 +416,128 @@ await Promise.all([
 
 This ensures all reference data is pre-loaded before the first MCP tool call.
 
+### Currency Formatting:
+
+The server automatically formats all monetary amounts in MCP tool responses for improved readability:
+
+#### Core Strategy:
+- **Dual-field approach**: All responses include both original milliunits AND formatted currency strings
+- **Automatic formatting**: Applied to all tools that return financial data
+- **Uses budget settings**: Formats according to the active budget's currency format (from settings cache)
+
+#### How It Works:
+
+1. **Milliunit Storage**: YNAB stores all amounts as milliunits (1000 milliunits = 1 currency unit)
+2. **Response Transformation**: Before returning data to LLMs, the server adds `_formatted` fields
+3. **Preserved Precision**: Original milliunit values remain unchanged for calculations
+
+#### Example Response:
+
+**Before formatting:**
+```json
+{
+  "amount": -50000,
+  "balance": 1000000
+}
+```
+
+**After formatting:**
+```json
+{
+  "amount": -50000,
+  "amount_formatted": "-$50.00",
+  "balance": 1000000,
+  "balance_formatted": "$1,000.00"
+}
+```
+
+#### Formatted Fields:
+
+The following amount fields automatically get `_formatted` counterparts:
+- `amount` → `amount_formatted`
+- `balance` → `balance_formatted`
+- `cleared_balance` → `cleared_balance_formatted`
+- `uncleared_balance` → `uncleared_balance_formatted`
+- `budgeted` → `budgeted_formatted`
+- `activity` → `activity_formatted`
+- `goal_target` → `goal_target_formatted`
+- `goal_overall_funded`, `goal_under_funded`, `goal_overall_left`
+- `income`, `available`, `carry_over`
+
+#### Why Both Formats?
+
+**Milliunits (original):**
+- Required for transaction splitting (must sum exactly to parent amount)
+- Precise calculations without floating-point errors
+- Required by YNAB API for write operations
+
+**Formatted strings:**
+- Human-readable for LLMs and users
+- Shows currency symbol and proper decimal places
+- Locale-aware formatting (e.g., "$1,234.56" vs "€1.234,56")
+
+#### Transaction Splitting Example:
+
+```typescript
+// 1. Get transaction (includes both formats)
+const response = await ynab.getTransactions();
+// {
+//   amount: -100000,
+//   amount_formatted: "-$100.00",
+//   ...
+// }
+
+// 2. Stage split using milliunits (required for exact math)
+await ynab.stageSplit({
+  transactionId: "txn-123",
+  subtransactions: [
+    { amount: -50000, category_id: "cat-1" },  // Use milliunits!
+    { amount: -50000, category_id: "cat-2" }
+  ]
+});
+
+// 3. Review shows both formats
+const review = await ynab.reviewChanges();
+// {
+//   changes: [{
+//     proposedChanges: {
+//       subtransactions: [
+//         {
+//           amount: -50000,
+//           amount_formatted: "-$50.00",  // Formatted for display
+//           category_id: "cat-1"
+//         }
+//       ]
+//     }
+//   }]
+// }
+```
+
+#### Implementation Details:
+
+**Formatter Location:** `src/utils/currency-formatter.ts`
+- Uses `Intl.NumberFormat` for locale-aware formatting
+- Caches formatter instances for performance
+- Supports all currency formats (USD, EUR, JPY, etc.)
+
+**Transformer Location:** `src/utils/response-transformer.ts`
+- Recursively walks response objects/arrays
+- Adds `_formatted` fields next to amount fields
+- Preserves all original data unchanged
+
+**Applied Tools:**
+- Transactions: `getTransactions`, `createTransaction`, `updateTransactions`, `importTransactions`, `deleteTransaction`
+- Accounts: `getAccounts`, `createAccount`
+- Categories: `getCategories`, `updateCategory`, `getMonthCategory`, `updateMonthCategory`
+- Months: `getMonths`, `getMonthDetail`
+- Budgets: `getBudgets`, `getBudgetById`
+- Scheduled transactions: All scheduled transaction tools
+- Staging: `reviewChanges` (shows formatted amounts in staged changes)
+
+**Testing:** Comprehensive tests in `tests/utils/`:
+- `currency-formatter.test.ts` - Tests USD, EUR, JPY formatting with edge cases
+- `response-transformer.test.ts` - Tests transformation of nested structures
+
 ### Testing Approach:
 The project uses a comprehensive multi-layer testing strategy:
 

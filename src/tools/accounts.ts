@@ -2,7 +2,8 @@ import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { createAccount } from "../api/index.js";
 import { accountStore } from "../cache/index.js";
-import { errorResult, isReadOnly, readOnlyResult, successResult, getActiveBudgetIdOrError } from "./utils.js";
+import { errorResult, isReadOnly, readOnlyResult, successResult, getActiveBudgetIdOrError, getCurrencyFormat } from "./utils.js";
+import { addFormattedAmounts } from "../utils/response-transformer.js";
 
 export function registerGetAccountsTool(server: McpServer): void {
   const schema = z.object({});
@@ -20,7 +21,12 @@ export function registerGetAccountsTool(server: McpServer): void {
       try {
         const budgetId = getActiveBudgetIdOrError();
         const accounts = await accountStore.getState().getAccounts(budgetId);
-        return successResult(`Accounts for budget ${budgetId}`, { data: { accounts } });
+
+        // Add formatted currency amounts
+        const currencyFormat = await getCurrencyFormat();
+        const formattedResponse = addFormattedAmounts({ data: { accounts } }, currencyFormat);
+
+        return successResult(`Accounts for budget ${budgetId}`, formattedResponse);
       } catch (error) {
         return errorResult(error);
       }
@@ -76,9 +82,14 @@ export function registerCreateAccountTool(server: McpServer): void {
         const response = await createAccount({ budgetId, ...args });
         // Invalidate cache after write operation
         accountStore.getState().invalidate(budgetId);
+
+        // Add formatted currency amounts
+        const currencyFormat = await getCurrencyFormat();
+        const formattedResponse = addFormattedAmounts(response, currencyFormat);
+
         return successResult(
           `Account created in budget ${budgetId}`,
-          response,
+          formattedResponse,
         );
       } catch (error) {
         return errorResult(error);

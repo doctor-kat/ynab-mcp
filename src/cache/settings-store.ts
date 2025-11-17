@@ -69,4 +69,23 @@ export const settingsStore = createStore<SettingsState & SettingsActions>()((set
   reset() {
     set({ cache: new Map() });
   },
+
+  async initialize() {
+    // Eagerly initialize settings cache for the active budget
+    const { budgetStore } = await import("../budget/index.js");
+    const context = budgetStore.getState().getBudgetContext();
+
+    if (!context.activeBudgetId) {
+      console.warn("[Settings Cache] No active budget, skipping settings cache initialization");
+      return;
+    }
+
+    try {
+      await get().getSettings(context.activeBudgetId);
+      console.info(`[Settings Cache] Initialized for budget ${context.activeBudgetName}`);
+    } catch (error) {
+      console.error("[Settings Cache] Failed to initialize:", error);
+      // Don't throw - allow server to start even if settings cache fails
+    }
+  },
 }));

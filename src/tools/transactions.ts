@@ -14,12 +14,14 @@ import {
 import {
   errorResult,
   getActiveBudgetIdOrError,
+  getCurrencyFormat,
   getResultSizeWarning,
   isReadOnly,
   limitResults,
   readOnlyResult,
   successResult,
 } from "./utils.js";
+import { addFormattedAmounts } from "../utils/response-transformer.js";
 
 export function registerGetTransactionsTool(server: McpServer): void {
   const schema = z.object({
@@ -151,7 +153,11 @@ export function registerGetTransactionsTool(server: McpServer): void {
           .filter(Boolean)
           .join("\n");
 
-        return successResult(message, limitedResponse);
+        // Add formatted currency amounts
+        const currencyFormat = await getCurrencyFormat();
+        const formattedResponse = addFormattedAmounts(limitedResponse, currencyFormat);
+
+        return successResult(message, formattedResponse);
       } catch (error) {
         return errorResult(error);
       }
@@ -208,9 +214,14 @@ export function registerCreateTransactionTool(server: McpServer): void {
       try {
         const budgetId = getActiveBudgetIdOrError();
         const response = await createTransaction({ budgetId, ...args });
+
+        // Add formatted currency amounts
+        const currencyFormat = await getCurrencyFormat();
+        const formattedResponse = addFormattedAmounts(response, currencyFormat);
+
         return successResult(
           `Transaction(s) created in budget ${budgetId}`,
-          response,
+          formattedResponse,
         );
       } catch (error) {
         return errorResult(error);
@@ -271,9 +282,14 @@ export function registerUpdateTransactionsTool(server: McpServer): void {
       try {
         const budgetId = getActiveBudgetIdOrError();
         const response = await updateTransactions({ budgetId, ...args });
+
+        // Add formatted currency amounts
+        const currencyFormat = await getCurrencyFormat();
+        const formattedResponse = addFormattedAmounts(response, currencyFormat);
+
         return successResult(
           `${args.transactions.length} transaction(s) updated in budget ${budgetId}`,
-          response,
+          formattedResponse,
         );
       } catch (error) {
         return errorResult(error);
@@ -301,9 +317,14 @@ export function registerImportTransactionsTool(server: McpServer): void {
       try {
         const budgetId = getActiveBudgetIdOrError();
         const response = await importTransactions({ budgetId });
+
+        // Add formatted currency amounts
+        const currencyFormat = await getCurrencyFormat();
+        const formattedResponse = addFormattedAmounts(response, currencyFormat);
+
         return successResult(
           `Transactions imported for budget ${budgetId}`,
-          response,
+          formattedResponse,
         );
       } catch (error) {
         return errorResult(error);
@@ -332,9 +353,14 @@ export function registerDeleteTransactionTool(server: McpServer): void {
       try {
         const budgetId = getActiveBudgetIdOrError();
         const response = await deleteTransaction({ budgetId, ...args });
+
+        // Add formatted currency amounts
+        const currencyFormat = await getCurrencyFormat();
+        const formattedResponse = addFormattedAmounts(response, currencyFormat);
+
         return successResult(
           `Transaction ${args.transactionId} deleted from budget ${budgetId}`,
-          response,
+          formattedResponse,
         );
       } catch (error) {
         return errorResult(error);
