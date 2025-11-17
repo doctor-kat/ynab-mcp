@@ -317,6 +317,136 @@ export function registerStageSplitTool(server: McpServer): void {
 }
 
 /**
+ * Bulk categorize multiple transactions with a shared category
+ */
+export function registerBulkCategorizeTool(server: McpServer): void {
+  const schemaBase = z.object({
+    transactionIds: z
+      .array(z.string().min(1))
+      .min(1)
+      .describe("Array of transaction IDs to categorize (use ynab.getTransactions to discover)"),
+    categoryId: z.string().optional().describe("The category ID to assign (use ynab.getCategories to discover)"),
+    categoryName: z.string().optional().describe("The category name to assign (alternative to categoryId)"),
+    memo: z.string().optional().describe("Optional memo to update on all transactions"),
+    description: z
+      .string()
+      .optional()
+      .describe("Human-readable description of this bulk change"),
+  });
+
+  const schema = schemaBase
+    .refine((data) => data.categoryId || data.categoryName, {
+      message: "Either categoryId or categoryName must be provided",
+    })
+    .refine((data) => !(data.categoryId && data.categoryName), {
+      message: "Cannot provide both categoryId and categoryName",
+    });
+
+  type SchemaType = z.infer<typeof schemaBase>;
+
+  server.registerTool(
+    "ynab.bulkCategorize",
+    {
+      title: "Bulk categorize transactions",
+      description:
+        "Stage categorization for multiple transactions with a shared category in one call for the active budget. More efficient than staging each transaction individually. Use ynab.reviewChanges to inspect and ynab.applyChanges to commit.",
+      inputSchema: schemaBase.shape,
+    },
+    async (args: SchemaType) => {
+      try {
+        const budgetId = getActiveBudgetIdOrError();
+
+        // Resolve category name to ID if provided
+        let categoryId = args.categoryId;
+        if (args.categoryName) {
+          const resolvedId = await resolveCategoryId(budgetId, args.categoryName);
+          if (!resolvedId) {
+            return errorResult(new Error(`Category not found: ${args.categoryName}`));
+          }
+          categoryId = resolvedId;
+        }
+
+        // Fetch all transactions and stage changes
+        const stagedChanges = [];
+        const errors = [];
+
+        for (const transactionId of args.transactionIds) {
+          try {
+            // Fetch current transaction state
+            const currentTx = await getTransactionById({
+              budgetId,
+              transactionId,
+            });
+
+            const transaction = currentTx.data.transaction;
+
+            // Stage the change
+            const stagedChange = stagingStore.getState().stageChange({
+              type: ChangeType.CATEGORIZATION,
+              budgetId,
+              transactionId,
+              description:
+                args.description ||
+                `Bulk categorize to ${categoryId}`,
+              originalTransaction: {
+                category_id: transaction.category_id,
+                memo: transaction.memo,
+              },
+              proposedChanges: {
+                category_id: categoryId,
+                memo: args.memo,
+              },
+            });
+
+            stagedChanges.push({
+              changeId: stagedChange.id,
+              transactionId,
+              status: "staged",
+            });
+          } catch (error) {
+            errors.push({
+              transactionId,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        }
+
+        // Build response with context
+        const currencyFormat = await getCurrencyFormat();
+        const categories = await categoryStore.getState().getCategories(budgetId);
+
+        // Find category name
+        const findCategoryName = (categoryId: string | null | undefined): string => {
+          if (!categoryId) return "Uncategorized";
+          for (const group of categories) {
+            const category = group.categories.find(c => c.id === categoryId);
+            if (category) return category.name;
+          }
+          return categoryId;
+        };
+
+        const categoryName = findCategoryName(categoryId);
+
+        const summary =
+          `✅ Staged ${stagedChanges.length} transaction(s) for categorization to: ${categoryName}` +
+          (errors.length > 0 ? `\n⚠️  ${errors.length} transaction(s) failed to stage` : "");
+
+        return successResult(summary, {
+          stagedCount: stagedChanges.length,
+          failedCount: errors.length,
+          categoryId,
+          categoryName,
+          stagedChanges,
+          errors: errors.length > 0 ? errors : undefined,
+        });
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+}
+
+/**
  * Review all staged changes
  */
 export function registerReviewChangesTool(server: McpServer): void {

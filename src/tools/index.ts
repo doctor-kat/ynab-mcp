@@ -46,6 +46,7 @@ import {
 } from "./scheduled-transactions.js";
 import {
   registerApplyChangesTool,
+  registerBulkCategorizeTool,
   registerClearChangesTool,
   registerReviewChangesTool,
   registerStageCategorizationTool,
@@ -124,13 +125,14 @@ export function registerTools({ server }: ToolRegistrationContext): number {
   registerDeleteScheduledTransactionTool(server);
   toolCount += 4;
 
-  // Staging Tools (5 tools)
+  // Staging Tools (6 tools)
   registerStageCategorizationTool(server);
   registerStageSplitTool(server);
+  registerBulkCategorizeTool(server);
   registerReviewChangesTool(server);
   registerApplyChangesTool(server);
   registerClearChangesTool(server);
-  toolCount += 5;
+  toolCount += 6;
 
   // Cache Management Tools (5 tools)
   registerRefreshPayeeCacheTool(server);
