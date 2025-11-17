@@ -12,9 +12,7 @@ export function registerGetAccountsTool(server: McpServer): void {
     "ynab.getAccounts",
     {
       title: "Get accounts",
-      description:
-        "Retrieve and return all accounts for the active budget. " +
-        "Uses cached data with delta requests for optimal performance.",
+      description: "Get all accounts with balances and details.",
       inputSchema: schema.shape,
     },
     async () => {
@@ -69,7 +67,7 @@ export function registerCreateAccountTool(server: McpServer): void {
     "ynab.createAccount",
     {
       title: "Create account",
-      description: "Create a new account in the active budget.",
+      description: "Create a new account.",
       inputSchema: schema.shape,
     },
     async (args) => {

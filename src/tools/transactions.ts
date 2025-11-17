@@ -97,7 +97,7 @@ export function registerGetTransactionsTool(server: McpServer): void {
     {
       title: "Get transactions",
       description:
-        "Retrieve and return transactions for the active budget with optional filters for account, category, payee, month, or amount. Excludes pending transactions. ⚠️ Can return large payloads - use date filters (sinceDate/sinceDaysAgo/sinceRelative), amount filters (minAmount/maxAmount), and limit to reduce context size. Date convenience: sinceDaysAgo: 7 (last week), sinceRelative: 'month' (last 30 days). Amount filters accept both '$50.00' or 50.",
+        "Get transactions with optional filters (account, category, payee, month, date, amount). Excludes pending transactions. ⚠️ Can return large payloads - use filters to reduce size: sinceDate (ISO format), sinceDaysAgo (e.g., 7 for last week), sinceRelative ('week'/'month'/'quarter'/'year'), minAmount/maxAmount (accepts '$50.00' or 50), limit (max results).",
       inputSchema: schema.shape,
     },
     async (args: any) => {
@@ -288,8 +288,7 @@ export function registerCreateTransactionTool(server: McpServer): void {
     "ynab.createTransaction",
     {
       title: "Create transaction",
-      description:
-        "Create a single transaction or multiple transactions in the active budget. Scheduled transactions cannot be created on this endpoint.",
+      description: "Create one or more transactions. For future/recurring transactions, use createScheduledTransaction instead.",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -422,7 +421,7 @@ export function registerUpdateTransactionsTool(server: McpServer): void {
     "ynab.updateTransactions",
     {
       title: "Update transactions",
-      description: "Update multiple transactions by id or import_id in the active budget.",
+      description: "Update one or more transactions by ID or import_id.",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -502,8 +501,7 @@ export function registerImportTransactionsTool(server: McpServer): void {
     "ynab.importTransactions",
     {
       title: "Import transactions",
-      description:
-        'Import available transactions on all linked accounts for the active budget. Equivalent to clicking "Import" on each account.',
+      description: "Import available transactions from all linked accounts.",
       inputSchema: schema.shape,
     },
     async () => {
@@ -539,7 +537,7 @@ export function registerDeleteTransactionTool(server: McpServer): void {
     "ynab.deleteTransaction",
     {
       title: "Delete transaction",
-      description: "Delete a transaction from the active budget.",
+      description: "Delete a transaction.",
       inputSchema: schema.shape,
     },
     async (args) => {

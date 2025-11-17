@@ -27,7 +27,7 @@ export function registerGetScheduledTransactionsTool(server: McpServer): void {
     "ynab.getScheduledTransactions",
     {
       title: "Get scheduled transactions",
-      description: "Retrieve and return all scheduled transactions for the active budget.",
+      description: "Get all scheduled (recurring/future) transactions.",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -114,8 +114,7 @@ export function registerCreateScheduledTransactionTool(
     "ynab.createScheduledTransaction",
     {
       title: "Create scheduled transaction",
-      description:
-        "Create a single scheduled transaction (a transaction with a future date) in the active budget.",
+      description: "Create a scheduled (recurring/future) transaction.",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -251,7 +250,7 @@ export function registerUpdateScheduledTransactionTool(
     "ynab.updateScheduledTransaction",
     {
       title: "Update scheduled transaction",
-      description: "Update a single scheduled transaction in the active budget.",
+      description: "Update a scheduled transaction.",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -327,7 +326,7 @@ export function registerDeleteScheduledTransactionTool(
     "ynab.deleteScheduledTransaction",
     {
       title: "Delete scheduled transaction",
-      description: "Delete a scheduled transaction from the active budget.",
+      description: "Delete a scheduled transaction.",
       inputSchema: schema.shape,
     },
     async (args) => {

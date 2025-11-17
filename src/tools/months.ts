@@ -17,7 +17,7 @@ export function registerGetBudgetMonthsTool(server: McpServer): void {
     "ynab.getBudgetMonths",
     {
       title: "Get budget months",
-      description: "Retrieve and return all budget months for the active budget.",
+      description: "Get all budget months.",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -52,7 +52,7 @@ export function registerGetBudgetMonthTool(server: McpServer): void {
     "ynab.getBudgetMonth",
     {
       title: "Get budget month",
-      description: "Retrieve and return a single budget month for the active budget.",
+      description: "Get details for a specific budget month.",
       inputSchema: schema.shape,
     },
     async (args) => {

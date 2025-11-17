@@ -17,11 +17,9 @@ export function registerGetBudgetContextTool(server: McpServer): void {
     {
       title: "Get budget context",
       description:
-        "Get the cached budget context showing all available budgets and the currently active budget. " +
-        "This tool makes ZERO API calls - it returns cached data from server initialization. " +
-        "Use this to discover budgetId values for other tools. " +
-        "If you have one budget, the activeBudgetId will be auto-set. " +
-        "For multiple budgets, use ynab.setActiveBudget to set the working budget.",
+        "Get all available budgets and the currently active budget. " +
+        "Use this to discover budgetId values. " +
+        "For multiple budgets, use setActiveBudget to switch between them.",
       inputSchema: schema.shape,
     },
     async () => {
@@ -55,10 +53,8 @@ export function registerSetActiveBudgetTool(server: McpServer): void {
     {
       title: "Set active budget",
       description:
-        "Set the active budget in the context. " +
-        "This updates which budget is considered 'active' for your workflow. " +
-        "This tool makes ZERO API calls - it only updates in-memory state. " +
-        "The budgetId must be one of the budgets from ynab.getBudgetContext.",
+        "Switch the active budget. " +
+        "The budgetId must be one of the budgets from getBudgetContext.",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -89,10 +85,8 @@ export function registerRefreshBudgetContextTool(server: McpServer): void {
     {
       title: "Refresh budget context",
       description:
-        "Refresh the budget context cache by fetching the latest budgets from the YNAB API. " +
-        "This makes ONE API call to update the cache. " +
-        "Use this if budgets may have been added, removed, or renamed since the server started. " +
-        "In most cases, this is not needed - the cache is populated at server startup.",
+        "Refresh budget list from YNAB API. " +
+        "Use when budgets may have been added, removed, or renamed externally.",
       inputSchema: schema.shape,
     },
     async () => {

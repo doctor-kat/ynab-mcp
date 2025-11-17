@@ -14,10 +14,7 @@ export function registerRefreshPayeeCacheTool(server: McpServer): void {
     "ynab.refreshPayeeCache",
     {
       title: "Refresh payee cache",
-      description:
-        "Force refresh the payee cache for the active budget by fetching the latest data from the YNAB API. " +
-        "This invalidates and re-fetches all payees. " +
-        "Use this if payees have been added/modified outside this server session.",
+      description: "Refresh payee data from YNAB API. Use when payees were modified externally.",
       inputSchema: schema.shape,
     },
     async () => {
@@ -45,10 +42,7 @@ export function registerRefreshCategoryCacheTool(server: McpServer): void {
     "ynab.refreshCategoryCache",
     {
       title: "Refresh category cache",
-      description:
-        "Force refresh the category cache for the active budget by fetching the latest data from the YNAB API. " +
-        "This invalidates and re-fetches all categories. " +
-        "Use this if categories have been added/modified outside this server session.",
+      description: "Refresh category data from YNAB API. Use when categories were modified externally.",
       inputSchema: schema.shape,
     },
     async () => {
@@ -76,10 +70,7 @@ export function registerRefreshAccountCacheTool(server: McpServer): void {
     "ynab.refreshAccountCache",
     {
       title: "Refresh account cache",
-      description:
-        "Force refresh the account cache for the active budget by fetching the latest data from the YNAB API. " +
-        "This invalidates and re-fetches all accounts. " +
-        "Use this if accounts have been added/modified outside this server session.",
+      description: "Refresh account data from YNAB API. Use when accounts were modified externally.",
       inputSchema: schema.shape,
     },
     async () => {
@@ -107,10 +98,7 @@ export function registerRefreshSettingsCacheTool(server: McpServer): void {
     "ynab.refreshSettingsCache",
     {
       title: "Refresh settings cache",
-      description:
-        "Force refresh the budget settings cache for the active budget by fetching the latest data from the YNAB API. " +
-        "This invalidates and re-fetches budget settings (currency format, date format). " +
-        "Settings are cached for 24 hours by default.",
+      description: "Refresh budget settings from YNAB API. Use when currency or date format settings changed.",
       inputSchema: schema.shape,
     },
     async () => {
@@ -138,11 +126,7 @@ export function registerClearAllCachesTool(server: McpServer): void {
     "ynab.clearAllCaches",
     {
       title: "Clear all caches",
-      description:
-        "Clear all caches (budget context, payees, categories, accounts, settings). " +
-        "This resets all cached data. " +
-        "Useful for troubleshooting or forcing a complete refresh. " +
-        "Caches will be repopulated on next access.",
+      description: "Clear all caches (budgets, payees, categories, accounts, settings). Use for troubleshooting.",
       inputSchema: schema.shape,
     },
     async () => {

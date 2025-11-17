@@ -10,7 +10,7 @@ export function registerGetPayeeLocationsTool(server: McpServer): void {
     "ynab.getPayeeLocations",
     {
       title: "Get payee locations",
-      description: "Retrieve and return all payee locations for the active budget.",
+      description: "Get all payee locations.",
       inputSchema: schema.shape,
     },
     async () => {
@@ -37,7 +37,7 @@ export function registerGetPayeeLocationsByPayeeTool(server: McpServer): void {
     "ynab.getPayeeLocationsByPayee",
     {
       title: "Get payee locations by payee",
-      description: "Retrieve and return all payee locations for a specific payee in the active budget.",
+      description: "Get all locations for a specific payee.",
       inputSchema: schema.shape,
     },
     async (args) => {

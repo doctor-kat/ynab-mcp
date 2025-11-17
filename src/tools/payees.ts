@@ -11,9 +11,7 @@ export function registerGetPayeesTool(server: McpServer): void {
     "ynab.getPayees",
     {
       title: "Get payees",
-      description:
-        "Retrieve and return all payees for the active budget. " +
-        "Uses cached data with delta requests for optimal performance.",
+      description: "Get all payees.",
       inputSchema: schema.shape,
     },
     async () => {
@@ -43,7 +41,7 @@ export function registerUpdatePayeeTool(server: McpServer): void {
     "ynab.updatePayee",
     {
       title: "Update payee",
-      description: "Update a payee in the active budget.",
+      description: "Update a payee name.",
       inputSchema: schema.shape,
     },
     async (args) => {
