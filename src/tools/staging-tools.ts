@@ -16,6 +16,8 @@ import {
 } from "./utils.js";
 import type { SaveSubTransaction } from "../api/index.js";
 import { addFormattedAmounts } from "../utils/response-transformer.js";
+import { categoryStore, payeeStore } from "../cache/index.js";
+import { formatMilliunits } from "../utils/currency-formatter.js";
 
 /**
  * Stage a categorization change without applying it
@@ -69,19 +71,54 @@ export function registerStageCategorizationTool(server: McpServer): void {
           },
         });
 
+        // Enrich response with context
+        const currencyFormat = await getCurrencyFormat();
+        const categories = await categoryStore.getState().getCategories(budgetId);
+        const payees = await payeeStore.getState().getPayees(budgetId);
+
+        // Resolve category names
+        const findCategoryName = (categoryId: string | null | undefined): string => {
+          if (!categoryId) return "Uncategorized";
+          for (const group of categories) {
+            const category = group.categories.find(c => c.id === categoryId);
+            if (category) return category.name;
+          }
+          return categoryId; // Fallback to ID if not found
+        };
+
+        // Resolve payee name
+        const payeeName = transaction.payee_name ||
+          payees.find(p => p.id === transaction.payee_id)?.name ||
+          "Unknown";
+
+        // Build human-readable summary
+        const formattedAmount = formatMilliunits(transaction.amount, currencyFormat);
+        const fromCategory = findCategoryName(transaction.category_id);
+        const toCategory = findCategoryName(args.categoryId);
+
+        const summary = `Staged: ${payeeName} (${formattedAmount}) - Category: ${fromCategory} → ${toCategory}`;
+
         return successResult(
-          `✅ Staged categorization for transaction ${args.transactionId} (change ID: ${stagedChange.id})`,
+          `✅ ${summary}\n\nChange ID: ${stagedChange.id}`,
           {
             changeId: stagedChange.id,
-            transactionId: args.transactionId,
-            changes: {
-              category_id: {
-                from: transaction.category_id,
-                to: args.categoryId,
-              },
-              memo: args.memo
-                ? { from: transaction.memo, to: args.memo }
-                : undefined,
+            transaction: {
+              id: transaction.id,
+              date: transaction.date,
+              amount: transaction.amount,
+              formattedAmount,
+              payee_name: payeeName,
+              memo: transaction.memo,
+            },
+            originalState: {
+              category_id: transaction.category_id,
+              category_name: fromCategory,
+              memo: transaction.memo,
+            },
+            proposedState: {
+              category_id: args.categoryId,
+              category_name: toCategory,
+              memo: args.memo || transaction.memo,
             },
           },
         );
@@ -170,14 +207,63 @@ export function registerStageSplitTool(server: McpServer): void {
           },
         });
 
+        // Enrich response with context
+        const currencyFormat = await getCurrencyFormat();
+        const categories = await categoryStore.getState().getCategories(budgetId);
+        const payees = await payeeStore.getState().getPayees(budgetId);
+
+        // Helper functions
+        const findCategoryName = (categoryId: string | null | undefined): string => {
+          if (!categoryId) return "Uncategorized";
+          for (const group of categories) {
+            const category = group.categories.find(c => c.id === categoryId);
+            if (category) return category.name;
+          }
+          return categoryId;
+        };
+
+        const findPayeeName = (payeeId: string | null | undefined, payeeName: string | null | undefined): string => {
+          if (payeeName) return payeeName;
+          if (!payeeId) return "Unknown";
+          return payees.find(p => p.id === payeeId)?.name || payeeId;
+        };
+
+        // Format transaction details
+        const formattedAmount = formatMilliunits(transaction.amount, currencyFormat);
+        const transactionPayeeName = findPayeeName(transaction.payee_id, transaction.payee_name);
+
+        // Format subtransactions with enriched data
+        const enrichedSubtransactions = args.subtransactions.map(sub => ({
+          amount: sub.amount,
+          formattedAmount: formatMilliunits(sub.amount, currencyFormat),
+          category_id: sub.category_id,
+          category_name: findCategoryName(sub.category_id),
+          payee_id: sub.payee_id,
+          payee_name: findPayeeName(sub.payee_id, sub.payee_name),
+          memo: sub.memo,
+        }));
+
+        // Build human-readable summary
+        const splitSummary = enrichedSubtransactions
+          .map(sub => `  - ${sub.formattedAmount} → ${sub.category_name}`)
+          .join("\n");
+
+        const summary = `Staged split: ${transactionPayeeName} (${formattedAmount}) → ${args.subtransactions.length} parts\n${splitSummary}`;
+
         return successResult(
-          `✅ Staged split for transaction ${args.transactionId} into ${args.subtransactions.length} parts (change ID: ${stagedChange.id})`,
+          `✅ ${summary}\n\nChange ID: ${stagedChange.id}`,
           {
             changeId: stagedChange.id,
-            transactionId: args.transactionId,
-            totalAmount: transaction.amount,
+            transaction: {
+              id: transaction.id,
+              date: transaction.date,
+              amount: transaction.amount,
+              formattedAmount,
+              payee_name: transactionPayeeName,
+              memo: transaction.memo,
+            },
+            subtransactions: enrichedSubtransactions,
             subtransactionCount: args.subtransactions.length,
-            subtransactions: args.subtransactions,
           },
         );
       } catch (error) {
