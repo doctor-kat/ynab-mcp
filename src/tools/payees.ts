@@ -1,29 +1,28 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { getPayees, updatePayee } from "../api/index.js";
+import { updatePayee } from "../api/index.js";
+import { payeeStore } from "../cache/index.js";
 import { errorResult, isReadOnly, readOnlyResult, successResult } from "./utils.js";
 
 export function registerGetPayeesTool(server: McpServer): void {
   const schema = z.object({
     budgetId: z.string().min(1).describe("The ID of the budget"),
-    lastKnowledgeOfServer: z
-      .number()
-      .int()
-      .optional()
-      .describe("Server knowledge timestamp for delta requests"),
   });
 
   server.registerTool(
     "ynab.getPayees",
     {
       title: "Get payees",
-      description: "Retrieve and return all payees for a budget. Use ynab.getBudgetContext to get your budgetId.",
+      description:
+        "Retrieve and return all payees for a budget. " +
+        "Uses cached data with delta requests for optimal performance. " +
+        "Use ynab.getBudgetContext to get your budgetId.",
       inputSchema: schema.shape,
     },
     async (args) => {
       try {
-        const response = await getPayees(args);
-        return successResult(`Payees for budget ${args.budgetId}`, response);
+        const payees = await payeeStore.getState().getPayees(args.budgetId);
+        return successResult(`Payees for budget ${args.budgetId}`, { data: { payees } });
       } catch (error) {
         return errorResult(error);
       }
@@ -57,6 +56,8 @@ export function registerUpdatePayeeTool(server: McpServer): void {
 
       try {
         const response = await updatePayee(args);
+        // Invalidate cache after write operation
+        payeeStore.getState().invalidate(args.budgetId);
         return successResult(
           `Payee ${args.payeeId} updated in budget ${args.budgetId}`,
           response,

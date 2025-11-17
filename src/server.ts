@@ -5,6 +5,7 @@ import { loadEnv } from "./env.js";
 import { initializeClient } from "./api/index.js";
 import { registerTools } from "./tools/index.js";
 import { budgetStore } from "./budget/index.js";
+import { payeeStore, categoryStore, accountStore } from "./cache/index.js";
 
 export interface ServerBundle {
   server: McpServer;
@@ -50,6 +51,15 @@ export async function startServer(env: Env = loadEnv()): Promise<void> {
   } else if (context.budgets.length === 0) {
     console.warn("⚠ No budgets found");
   }
+
+  // Initialize reference data caches (eager loading for active budget)
+  console.info("💾 Initializing reference data caches...");
+  await Promise.all([
+    payeeStore.getState().initialize(),
+    categoryStore.getState().initialize(),
+    accountStore.getState().initialize(),
+  ]);
+  console.info("✓ Reference data caches initialized");
 
   const transport = new StdioServerTransport();
   await server.connect(transport);

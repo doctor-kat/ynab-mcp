@@ -51,6 +51,13 @@ import {
   registerStageCategorizationTool,
   registerStageSplitTool,
 } from "./staging-tools.js";
+import {
+  registerClearAllCachesTool,
+  registerRefreshAccountCacheTool,
+  registerRefreshCategoryCacheTool,
+  registerRefreshPayeeCacheTool,
+  registerRefreshSettingsCacheTool,
+} from "./cache-tools.js";
 
 export interface ToolRegistrationContext {
   server: McpServer;
@@ -123,6 +130,14 @@ export function registerTools({ server }: ToolRegistrationContext): number {
   registerReviewChangesTool(server);
   registerApplyChangesTool(server);
   registerClearChangesTool(server);
+  toolCount += 5;
+
+  // Cache Management Tools (5 tools)
+  registerRefreshPayeeCacheTool(server);
+  registerRefreshCategoryCacheTool(server);
+  registerRefreshAccountCacheTool(server);
+  registerRefreshSettingsCacheTool(server);
+  registerClearAllCachesTool(server);
   toolCount += 5;
 
   return toolCount;

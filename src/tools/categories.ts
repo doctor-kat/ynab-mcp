@@ -1,21 +1,16 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
-  getCategories,
   getMonthCategoryById,
   updateCategory,
   updateMonthCategory,
 } from "../api/index.js";
+import { categoryStore } from "../cache/index.js";
 import { errorResult, isReadOnly, readOnlyResult, successResult } from "./utils.js";
 
 export function registerGetCategoriesTool(server: McpServer): void {
   const schema = z.object({
     budgetId: z.string().min(1).describe("The ID of the budget"),
-    lastKnowledgeOfServer: z
-      .number()
-      .int()
-      .optional()
-      .describe("Server knowledge timestamp for delta requests"),
   });
 
   server.registerTool(
@@ -23,15 +18,18 @@ export function registerGetCategoriesTool(server: McpServer): void {
     {
       title: "Get categories",
       description:
-        "Retrieve and return all categories grouped by category group. Amounts are specific to the current budget month (UTC). Use ynab.getBudgetContext to get your budgetId.",
+        "Retrieve and return all categories grouped by category group. " +
+        "Uses cached data with delta requests for optimal performance. " +
+        "Amounts are specific to the current budget month (UTC). " +
+        "Use ynab.getBudgetContext to get your budgetId.",
       inputSchema: schema.shape,
     },
     async (args) => {
       try {
-        const response = await getCategories(args);
+        const category_groups = await categoryStore.getState().getCategories(args.budgetId);
         return successResult(
           `Categories for budget ${args.budgetId}`,
-          response,
+          { data: { category_groups } },
         );
       } catch (error) {
         return errorResult(error);
@@ -91,6 +89,8 @@ export function registerUpdateCategoryTool(server: McpServer): void {
 
       try {
         const response = await updateCategory(args);
+        // Invalidate cache after write operation
+        categoryStore.getState().invalidate(args.budgetId);
         return successResult(
           `Category ${args.categoryId} updated in budget ${args.budgetId}`,
           response,

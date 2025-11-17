@@ -1,29 +1,28 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { createAccount, getAccounts } from "../api/index.js";
+import { createAccount } from "../api/index.js";
+import { accountStore } from "../cache/index.js";
 import { errorResult, isReadOnly, readOnlyResult, successResult } from "./utils.js";
 
 export function registerGetAccountsTool(server: McpServer): void {
   const schema = z.object({
     budgetId: z.string().min(1).describe("The ID of the budget"),
-    lastKnowledgeOfServer: z
-      .number()
-      .int()
-      .optional()
-      .describe("Server knowledge timestamp for delta requests"),
   });
 
   server.registerTool(
     "ynab.getAccounts",
     {
       title: "Get accounts",
-      description: "Retrieve and return all accounts for a budget. Use ynab.getBudgetContext to get your budgetId.",
+      description:
+        "Retrieve and return all accounts for a budget. " +
+        "Uses cached data with delta requests for optimal performance. " +
+        "Use ynab.getBudgetContext to get your budgetId.",
       inputSchema: schema.shape,
     },
     async (args) => {
       try {
-        const response = await getAccounts(args);
-        return successResult(`Accounts for budget ${args.budgetId}`, response);
+        const accounts = await accountStore.getState().getAccounts(args.budgetId);
+        return successResult(`Accounts for budget ${args.budgetId}`, { data: { accounts } });
       } catch (error) {
         return errorResult(error);
       }
@@ -77,6 +76,8 @@ export function registerCreateAccountTool(server: McpServer): void {
 
       try {
         const response = await createAccount(args);
+        // Invalidate cache after write operation
+        accountStore.getState().invalidate(args.budgetId);
         return successResult(
           `Account created in budget ${args.budgetId}`,
           response,

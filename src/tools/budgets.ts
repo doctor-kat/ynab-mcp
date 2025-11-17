@@ -3,8 +3,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
   getBudgetById,
   getBudgets,
-  getBudgetSettingsById,
 } from "../api/index.js";
+import { settingsStore } from "../cache/index.js";
 import { errorResult, successResult } from "./utils.js";
 
 export function registerGetBudgetsTool(server: McpServer): void {
@@ -72,15 +72,18 @@ export function registerGetBudgetSettingsByIdTool(server: McpServer): void {
     "ynab.getBudgetSettingsById",
     {
       title: "Get budget settings by ID",
-      description: "Retrieve and return settings for a specific budget. Requires budgetId (use ynab.getBudgetContext to get your budgetId).",
+      description:
+        "Retrieve and return settings for a specific budget. " +
+        "Uses cached data with 24-hour TTL for optimal performance. " +
+        "Requires budgetId (use ynab.getBudgetContext to get your budgetId).",
       inputSchema: schema.shape,
     },
     async (args) => {
       try {
-        const response = await getBudgetSettingsById(args);
+        const settings = await settingsStore.getState().getSettings(args.budgetId);
         return successResult(
           `Budget ${args.budgetId} settings retrieved`,
-          response,
+          { data: { settings } },
         );
       } catch (error) {
         return errorResult(error);

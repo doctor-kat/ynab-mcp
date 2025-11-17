@@ -12,11 +12,13 @@ This is a TypeScript Model Context Protocol (MCP) server that wraps the YNAB API
 2. **API Client**: Strongly-typed functions (one per endpoint) organized by domain, using types from the OpenAPI spec
 3. **MCP Server**: Implements the Model Context Protocol with stdio transport
 4. **Budget Context System**: In-memory cache of budget data to minimize API calls (ONE call at startup, ZERO for operations)
-5. **Staging System**: In-memory tracker for staging and reviewing transaction modifications before applying
-6. **Tool Registration**: Provides MCP tools for:
+5. **Reference Data Caching**: Delta-based caching for payees, categories, accounts, and settings (TTL-based) to minimize API calls
+6. **Staging System**: In-memory tracker for staging and reviewing transaction modifications before applying
+7. **Tool Registration**: Provides MCP tools for:
    - Budget context and discovery helpers
    - Account, transaction, category, and payee management
    - Transaction categorization and splitting with stage-review-apply workflow
+   - Cache management and refresh operations
 
 ## Development Setup
 
@@ -43,17 +45,25 @@ This is a TypeScript Model Context Protocol (MCP) server that wraps the YNAB API
   - `scheduled-transactions/` – Scheduled transaction functions
 - `src/budget/` – Budget context system:
   - `types.ts` – TypeScript types for budget context and metadata
-  - `budget-context.ts` – Singleton manager for cached budget data
+  - `budget-store.ts` – Zustand store for cached budget data
+- `src/cache/` – Reference data caching system:
+  - `types.ts` – Cache entry types and store interfaces
+  - `payee-store.ts` – Zustand store with delta-based payee caching
+  - `category-store.ts` – Zustand store with nested delta merge for categories
+  - `account-store.ts` – Zustand store with delta-based account caching
+  - `settings-store.ts` – Zustand store with TTL-based settings caching
+  - `index.ts` – Cache store exports
 - `src/staging/` – Transaction staging system:
   - `types.ts` – TypeScript types for staged changes and session state
   - `staged-changes.ts` – Singleton tracker for managing staged modifications
 - `src/server.ts` – MCP server factory + stdio bootstrapper
 - `src/tools/` – MCP tool registrations:
   - `budget-context-tools.ts` – Budget context tools (get, set, refresh)
+  - `cache-tools.ts` – Cache management tools (refresh, clear)
   - Transaction, budget, account, category, payee tools
   - `staging-tools.ts` – Staging, review, and apply tools
 - `tools/generate_types.py` – Python-based type generator leveraging vendored PyYAML
-- `tests/` – Test suite for budget context, staging system, and API client behavior
+- `tests/` – Test suite for budget context, caching, staging system, and API client behavior
 
 ## Core Functionality
 
@@ -81,18 +91,19 @@ const result = await updateTransaction({
 ```
 
 ### MCP Tools:
-The server registers 43 tools across all YNAB API endpoints and change management:
+The server registers 38 tools across all YNAB API endpoints and change management:
 - 1 user tool (get user info)
 - 3 budget tools (list, get by ID, get settings)
 - **3 budget context tools** (get context, set active budget, refresh cache)
-- 3 account tools (list, create, get by ID)
-- 5 category tools (list, get, update, get month category, update month category)
-- 3 payee tools (list, get, update)
-- 3 payee location tools (list, get by ID, get by payee)
+- 2 account tools (list, create)
+- 4 category tools (list, update, get month category, update month category)
+- 2 payee tools (list, update)
+- 2 payee location tools (list, get by payee)
 - 2 month tools (list months, get month detail)
-- 11 transaction tools (list, create, update multiple, import, get by ID, update, delete, get by account/category/payee/month)
-- 5 scheduled transaction tools (list, create, get, update, delete)
+- 5 transaction tools (list, create, update multiple, import, delete)
+- 4 scheduled transaction tools (list, create, update, delete)
 - **5 staging tools** (stage categorization, stage split, review staged changes, apply changes, clear staged changes)
+- **5 cache management tools** (refresh payee cache, refresh category cache, refresh account cache, refresh settings cache, clear all caches)
 
 All tools follow the naming pattern `ynab.{operationName}` (e.g., `ynab.getTransactions`, `ynab.updateTransaction`, `ynab.getBudgetContext`)
 
@@ -222,11 +233,176 @@ const transactions = await ynab.getTransactions({
 - **LLM-friendly**: Reduces token usage by avoiding redundant API responses
 
 #### Implementation Details:
-- **Singleton pattern**: Uses `BudgetContextManager` singleton (similar to staging system)
+- **Zustand store pattern**: Uses Zustand vanilla stores for state management
 - **In-memory cache**: Budgets stored in memory for the server session
 - **Session-scoped**: Cache persists until server restart
 - **Lazy evaluation**: Budget metadata built into a Map for O(1) lookups
 - **Error handling**: Initialization errors are logged but don't crash the server
+
+### Reference Data Caching:
+
+The server implements **delta-based caching** for frequently accessed reference data to dramatically reduce API calls:
+
+#### Cached Data Types:
+
+1. **Payees** (delta-based)
+2. **Categories** (delta-based with nested groups)
+3. **Accounts** (delta-based)
+4. **Budget Settings** (TTL-based, 24-hour cache)
+
+#### Performance Benefits:
+
+- **Startup**: 4 API calls total (1 budget context + 3 reference data caches for active budget)
+- **Operations**: Near-zero API calls for cached data reads
+- **Updates**: Delta requests fetch only changes since last sync
+- **Estimated Reduction**: 35-45% fewer API calls compared to uncached implementation
+
+#### How Delta Caching Works:
+
+1. **Initial Fetch**: First call to a cache store fetches all data and stores `server_knowledge` value
+2. **Delta Requests**: Subsequent calls include `last_knowledge_of_server` parameter
+3. **Merge Logic**: Delta responses contain only changed/added/deleted items
+4. **Update Cache**: Merged data replaces cache, new `server_knowledge` stored
+5. **Fallback**: On API errors, stale cache data is returned when available
+
+Example delta merge for payees:
+```typescript
+// Initial fetch: Get all payees (server_knowledge: 100)
+const payees1 = await payeeStore.getState().getPayees(budgetId);
+// Returns: [payee-1, payee-2]
+
+// Delta request: Only fetch changes since server_knowledge 100
+const payees2 = await payeeStore.getState().getPayees(budgetId);
+// API returns: [payee-1 (updated), payee-3 (new), payee-4 (deleted flag)]
+// Merged cache: [payee-1 (updated), payee-2 (unchanged), payee-3 (new)]
+```
+
+#### Available Cache Management Tools:
+
+**`ynab.refreshPayeeCache`**
+- Forces full re-fetch of payees (ignores delta)
+- Use when payees were modified outside this server session
+- Clears and rebuilds the payee cache
+
+**`ynab.refreshCategoryCache`**
+- Forces full re-fetch of categories and category groups
+- Use when categories were added/modified externally
+- Handles nested category group structure
+
+**`ynab.refreshAccountCache`**
+- Forces full re-fetch of accounts
+- Use when accounts were created/modified externally
+- Updates balances and account details
+
+**`ynab.refreshSettingsCache`**
+- Forces re-fetch of budget settings (currency, date format)
+- Settings normally cached for 24 hours
+- Use when budget settings change
+
+**`ynab.clearAllCaches`**
+- Clears ALL caches (budget context + all reference data)
+- Nuclear option for troubleshooting
+- Caches repopulate on next access
+
+#### Write-Through Invalidation:
+
+When data is modified through MCP tools, the cache is automatically invalidated:
+
+```typescript
+// Creating an account invalidates the account cache
+await ynab.createAccount({ budgetId, account: { ... } });
+// Account cache is cleared and will be re-fetched on next access
+
+// Updating a payee invalidates the payee cache
+await ynab.updatePayee({ budgetId, payeeId, payee: { ... } });
+// Payee cache is cleared and will be re-fetched on next access
+```
+
+**Auto-invalidation triggers:**
+- `ynab.createAccount` → invalidates account cache
+- `ynab.updatePayee` → invalidates payee cache
+- `ynab.updateCategory` → invalidates category cache
+- `ynab.updateMonthCategory` → no invalidation (month-specific)
+
+#### Implementation Details:
+
+**Zustand Store Pattern:**
+All cache stores use Zustand vanilla stores for consistent state management:
+```typescript
+export const payeeStore = createStore<PayeeState & PayeeActions>()((set, get) => ({
+  cache: new Map<string, CacheEntry<Payee>>(),
+
+  async getPayees(budgetId: string) {
+    const cached = get().cache.get(budgetId);
+    if (cached) {
+      // Delta request using server_knowledge
+      const response = await apiGetPayees({
+        budgetId,
+        lastKnowledgeOfServer: cached.serverKnowledge,
+      });
+      const merged = mergeDelta(cached.data, response.data.payees);
+      set({ cache: new Map(get().cache).set(budgetId, { ... }) });
+    } else {
+      // Initial fetch
+    }
+  },
+
+  invalidate(budgetId: string) {
+    const newCache = new Map(get().cache);
+    newCache.delete(budgetId);
+    set({ cache: newCache });
+  },
+
+  // ... other methods
+}));
+```
+
+**Cache Entry Structure:**
+```typescript
+interface CacheEntry<T> {
+  data: T[];                 // Cached entities
+  serverKnowledge: number;   // Last known server state
+  lastFetched: Date;         // Timestamp of last fetch
+}
+
+interface TTLCacheEntry<T> {
+  data: T;                   // Cached data
+  expiresAt: Date;           // TTL expiration
+}
+```
+
+**Delta Merge Strategies:**
+
+1. **Simple Merge** (Payees, Accounts):
+   - Map existing items by ID
+   - Apply updates from delta
+   - Remove items marked as deleted
+   - Return merged array
+
+2. **Nested Merge** (Categories):
+   - Merge category groups first
+   - Within each group, merge categories
+   - Handle deletions at both levels
+   - Preserve group structure
+
+**TTL vs Delta:**
+- **Delta-based**: Payees, Categories, Accounts (YNAB API supports `server_knowledge`)
+- **TTL-based**: Settings (no delta support, cached for 24 hours)
+
+**Eager Loading:**
+At server startup, the system automatically initializes caches for the active budget:
+```typescript
+// In src/server.ts
+await budgetStore.getState().initialize();  // 1 API call
+
+await Promise.all([
+  payeeStore.getState().initialize(),       // 3 API calls (parallel)
+  categoryStore.getState().initialize(),
+  accountStore.getState().initialize(),
+]);
+```
+
+This ensures all reference data is pre-loaded before the first MCP tool call.
 
 ### Testing Approach:
 The project uses a comprehensive multi-layer testing strategy:
@@ -236,12 +412,13 @@ The project uses a comprehensive multi-layer testing strategy:
   - `tests/api/` - Unit tests for API client functions with mocked HTTP
   - `tests/server/` - Integration tests for MCP server initialization
   - `tests/budget/` - Budget context tests covering initialization, caching, and API call minimization
+  - `tests/cache/` - Cache store tests covering delta merging, TTL expiration, and invalidation
   - `tests/staging/` - Staged changes tracker tests covering staging, clearing, and filtering
   - `tests/e2e/` - End-to-end tests using MCP Client SDK (skipped by default)
   - `tests/helpers/` - Mock utilities and test environment helpers
 - **Features**: Fast execution, watch mode, UI mode, code coverage, and TypeScript support
 - **Mocking Strategy**: Mock HTTP fetch implementation to avoid network calls
-- **Coverage**: Tests validate success scenarios, error handling, parameter validation, schema compliance, budget context caching, and staging workflows
+- **Coverage**: Tests validate success scenarios, error handling, parameter validation, schema compliance, budget context caching, reference data caching with delta merging, and staging workflows
 - **Manual Testing**: MCP Inspector for interactive tool testing during development
 
 See `tests/README.md` for detailed testing guide and best practices
