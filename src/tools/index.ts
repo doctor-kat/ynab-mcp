@@ -21,6 +21,9 @@ import {
   registerGetMonthCategoryByIdTool,
   registerUpdateCategoryTool,
   registerUpdateMonthCategoryTool,
+  registerGetCategoryGroupsTool,
+  registerGetCategoriesByGroupTool,
+  registerGetCategoryTool,
 } from "./categories.js";
 import { registerGetPayeesTool, registerUpdatePayeeTool } from "./payees.js";
 import {
@@ -88,12 +91,15 @@ export function registerTools({ server }: ToolRegistrationContext): number {
   registerCreateAccountTool(server);
   toolCount += 2;
 
-  // Categories (4 tools)
+  // Categories (7 tools)
   registerGetCategoriesTool(server);
+  registerGetCategoryGroupsTool(server);
+  registerGetCategoriesByGroupTool(server);
+  registerGetCategoryTool(server);
   registerUpdateCategoryTool(server);
   registerGetMonthCategoryByIdTool(server);
   registerUpdateMonthCategoryTool(server);
-  toolCount += 4;
+  toolCount += 7;
 
   // Payees (2 tools)
   registerGetPayeesTool(server);

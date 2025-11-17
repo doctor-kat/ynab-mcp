@@ -79,6 +79,40 @@ export async function resolveCategoryId(
 }
 
 /**
+ * Resolve a category group name to a category group ID
+ * Uses case-insensitive matching
+ *
+ * @param budgetId - The budget ID
+ * @param categoryGroupName - The category group name to resolve
+ * @returns The category group ID if found, null otherwise
+ */
+export async function resolveCategoryGroupId(
+  budgetId: string,
+  categoryGroupName: string,
+): Promise<string | null> {
+  const categoryGroups = await categoryStore.getState().getCategories(budgetId);
+  const normalizedName = categoryGroupName.toLowerCase().trim();
+
+  // Try exact match first
+  const exactMatch = categoryGroups.find(
+    (group) => group.name.toLowerCase() === normalizedName,
+  );
+  if (exactMatch) {
+    return exactMatch.id;
+  }
+
+  // Try partial match (category group name contains search term)
+  const partialMatch = categoryGroups.find((group) =>
+    group.name.toLowerCase().includes(normalizedName),
+  );
+  if (partialMatch) {
+    return partialMatch.id;
+  }
+
+  return null;
+}
+
+/**
  * Resolve a payee name to a payee ID
  * Uses case-insensitive matching
  *

@@ -8,28 +8,91 @@ import {
 import { categoryStore } from "../cache/index.js";
 import { errorResult, isReadOnly, readOnlyResult, successResult, getActiveBudgetIdOrError, getCurrencyFormat } from "./utils.js";
 import { addFormattedAmounts } from "../utils/response-transformer.js";
+import { resolveCategoryGroupId, resolveCategoryId } from "./resolvers.js";
+import { filterCategoryGroupsWithCategories, filterCategoryGroups, selectCategoryGroupFields } from "../utils/category-filters.js";
 
 export function registerGetCategoriesTool(server: McpServer): void {
-  const schema = z.object({});
+  const baseSchema = z.object({
+    categoryGroupId: z.string().optional().describe("Filter by category group ID"),
+    categoryGroupName: z.string().optional().describe("Filter by category group name (alternative to categoryGroupId)"),
+    categoryId: z.string().optional().describe("Filter to specific category ID"),
+    categoryName: z.string().optional().describe("Filter to specific category name (alternative to categoryId)"),
+    includeHidden: z.boolean().optional().default(false).describe("Include hidden categories (default: false)"),
+    includeDeleted: z.boolean().optional().default(false).describe("Include deleted categories (default: false)"),
+    namePattern: z.string().optional().describe("Case-insensitive substring match on category names"),
+    full: z.boolean().optional().default(false).describe("Include all fields (budgeted, activity, balance, goal data). Default: false (minimal fields only)"),
+  });
+
+  const schema = baseSchema.refine((data) => !(data.categoryGroupId && data.categoryGroupName), {
+    message: "Cannot provide both categoryGroupId and categoryGroupName",
+  }).refine((data) => !(data.categoryId && data.categoryName), {
+    message: "Cannot provide both categoryId and categoryName",
+  });
 
   server.registerTool(
     "ynab.getCategories",
     {
       title: "Get categories",
       description:
-        "Retrieve and return all categories grouped by category group for the active budget. " +
-        "Uses cached data with delta requests for optimal performance. " +
-        "Amounts are specific to the current budget month (UTC).",
-      inputSchema: schema.shape,
+        "Get all categories grouped by category group. By default returns minimal fields and excludes hidden/deleted categories. " +
+        "Use getCategoryGroups or getCategoriesByGroup for smaller, focused queries. " +
+        "Set full=true only if you need budget amounts and goal data.",
+      inputSchema: baseSchema.shape,
     },
-    async () => {
+    async (args: any) => {
       try {
         const budgetId = getActiveBudgetIdOrError();
-        const category_groups = await categoryStore.getState().getCategories(budgetId);
+        let category_groups = await categoryStore.getState().getCategories(budgetId);
+
+        // Resolve category group name to ID if provided
+        let resolvedGroupId = args.categoryGroupId;
+        if (args.categoryGroupName) {
+          resolvedGroupId = await resolveCategoryGroupId(budgetId, args.categoryGroupName);
+          if (!resolvedGroupId) {
+            throw new Error(`Category group not found: ${args.categoryGroupName}`);
+          }
+        }
+
+        // Resolve category name to ID if provided
+        let resolvedCategoryId = args.categoryId;
+        if (args.categoryName) {
+          resolvedCategoryId = await resolveCategoryId(budgetId, args.categoryName);
+          if (!resolvedCategoryId) {
+            throw new Error(`Category not found: ${args.categoryName}`);
+          }
+        }
+
+        // Filter by category group if specified
+        if (resolvedGroupId) {
+          category_groups = category_groups.filter(group => group.id === resolvedGroupId);
+        }
+
+        // Filter by specific category if specified
+        if (resolvedCategoryId) {
+          category_groups = category_groups.map(group => ({
+            ...group,
+            categories: group.categories.filter(cat => cat.id === resolvedCategoryId),
+          })).filter(group => group.categories.length > 0);
+        }
+
+        // Apply filters and field selection
+        const filtered_groups = filterCategoryGroupsWithCategories(
+          category_groups,
+          {
+            includeHidden: args.includeHidden ?? false,
+            includeDeleted: args.includeDeleted ?? false,
+          },
+          {
+            includeHidden: args.includeHidden ?? false,
+            includeDeleted: args.includeDeleted ?? false,
+            namePattern: args.namePattern,
+          },
+          args.full ?? false,
+        );
 
         // Add formatted currency amounts
         const currencyFormat = await getCurrencyFormat();
-        const formattedResponse = addFormattedAmounts({ data: { category_groups } }, currencyFormat);
+        const formattedResponse = addFormattedAmounts({ data: { category_groups: filtered_groups } }, currencyFormat);
 
         return successResult(
           `Categories for budget ${budgetId}`,
@@ -186,6 +249,200 @@ export function registerUpdateMonthCategoryTool(server: McpServer): void {
 
         return successResult(
           `Category ${args.categoryId} updated for month ${args.month} in budget ${budgetId}`,
+          formattedResponse,
+        );
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+}
+
+export function registerGetCategoryGroupsTool(server: McpServer): void {
+  const schema = z.object({
+    includeHidden: z.boolean().optional().default(false).describe("Include hidden category groups (default: false)"),
+    includeDeleted: z.boolean().optional().default(false).describe("Include deleted category groups (default: false)"),
+  });
+
+  server.registerTool(
+    "ynab.getCategoryGroups",
+    {
+      title: "Get category groups",
+      description:
+        "Get category group metadata without nested categories. Returns just id, name, hidden, deleted for each group. " +
+        "Use when you only need to list or reference category groups.",
+      inputSchema: schema.shape,
+    },
+    async (args: any) => {
+      try {
+        const budgetId = getActiveBudgetIdOrError();
+        const category_groups = await categoryStore.getState().getCategories(budgetId);
+
+        // Filter and select fields
+        const filtered_groups = filterCategoryGroups(category_groups, {
+          includeHidden: args.includeHidden ?? false,
+          includeDeleted: args.includeDeleted ?? false,
+        });
+
+        const minimal_groups = filtered_groups.map(selectCategoryGroupFields);
+
+        return successResult(
+          `Category groups for budget ${budgetId}`,
+          { data: { category_groups: minimal_groups } },
+        );
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+}
+
+export function registerGetCategoriesByGroupTool(server: McpServer): void {
+  const baseSchema = z.object({
+    categoryGroupId: z.string().optional().describe("Category group ID"),
+    categoryGroupName: z.string().optional().describe("Category group name (alternative to categoryGroupId)"),
+    includeHidden: z.boolean().optional().default(false).describe("Include hidden categories (default: false)"),
+    includeDeleted: z.boolean().optional().default(false).describe("Include deleted categories (default: false)"),
+    namePattern: z.string().optional().describe("Case-insensitive substring match on category names"),
+    full: z.boolean().optional().default(false).describe("Include all fields (budgeted, activity, balance, goal data). Default: false (minimal fields only)"),
+  });
+
+  const schema = baseSchema.refine((data) => data.categoryGroupId || data.categoryGroupName, {
+    message: "Either categoryGroupId or categoryGroupName must be provided",
+  }).refine((data) => !(data.categoryGroupId && data.categoryGroupName), {
+    message: "Cannot provide both categoryGroupId and categoryGroupName",
+  });
+
+  server.registerTool(
+    "ynab.getCategoriesByGroup",
+    {
+      title: "Get categories by group",
+      description:
+        "Get categories within a specific category group. Returns focused results for one group. " +
+        "Use when you know which group contains the categories you need. " +
+        "Set full=true only if you need budget amounts or goal data.",
+      inputSchema: baseSchema.shape,
+    },
+    async (args: any) => {
+      try {
+        const budgetId = getActiveBudgetIdOrError();
+        let category_groups = await categoryStore.getState().getCategories(budgetId);
+
+        // Resolve category group name to ID if provided
+        let resolvedGroupId = args.categoryGroupId;
+        if (args.categoryGroupName) {
+          resolvedGroupId = await resolveCategoryGroupId(budgetId, args.categoryGroupName);
+          if (!resolvedGroupId) {
+            throw new Error(`Category group not found: ${args.categoryGroupName}`);
+          }
+        }
+
+        // Filter to the specific group
+        category_groups = category_groups.filter(group => group.id === resolvedGroupId);
+
+        if (category_groups.length === 0) {
+          throw new Error(`Category group not found: ${resolvedGroupId}`);
+        }
+
+        // Apply filters and field selection
+        const filtered_groups = filterCategoryGroupsWithCategories(
+          category_groups,
+          {
+            includeHidden: args.includeHidden ?? false,
+            includeDeleted: args.includeDeleted ?? false,
+          },
+          {
+            includeHidden: args.includeHidden ?? false,
+            includeDeleted: args.includeDeleted ?? false,
+            namePattern: args.namePattern,
+          },
+          args.full ?? false,
+        );
+
+        // Extract categories from the single group
+        const categories = (filtered_groups[0] as any)?.categories || [];
+
+        // Add formatted currency amounts if full=true
+        const currencyFormat = await getCurrencyFormat();
+        const formattedResponse = addFormattedAmounts({ data: { categories } }, currencyFormat);
+
+        return successResult(
+          `Categories in group ${resolvedGroupId} for budget ${budgetId}`,
+          formattedResponse,
+        );
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+}
+
+export function registerGetCategoryTool(server: McpServer): void {
+  const baseSchema = z.object({
+    categoryId: z.string().optional().describe("Category ID"),
+    categoryName: z.string().optional().describe("Category name (alternative to categoryId)"),
+    full: z.boolean().optional().default(false).describe("Include all fields (budgeted, activity, balance, goal data). Default: false (minimal fields only)"),
+  });
+
+  const schema = baseSchema.refine((data) => data.categoryId || data.categoryName, {
+    message: "Either categoryId or categoryName must be provided",
+  }).refine((data) => !(data.categoryId && data.categoryName), {
+    message: "Cannot provide both categoryId and categoryName",
+  });
+
+  server.registerTool(
+    "ynab.getCategory",
+    {
+      title: "Get category",
+      description:
+        "Get details for a single category by ID or name. Use when you need information about one specific category. " +
+        "Set full=true only if you need budget amounts or goal data.",
+      inputSchema: baseSchema.shape,
+    },
+    async (args: any) => {
+      try {
+        const budgetId = getActiveBudgetIdOrError();
+        let category_groups = await categoryStore.getState().getCategories(budgetId);
+
+        // Resolve category name to ID if provided
+        let resolvedCategoryId = args.categoryId;
+        if (args.categoryName) {
+          resolvedCategoryId = await resolveCategoryId(budgetId, args.categoryName);
+          if (!resolvedCategoryId) {
+            throw new Error(`Category not found: ${args.categoryName}`);
+          }
+        }
+
+        // Find the category
+        let foundCategory = null;
+        for (const group of category_groups) {
+          foundCategory = group.categories.find(cat => cat.id === resolvedCategoryId);
+          if (foundCategory) break;
+        }
+
+        if (!foundCategory) {
+          throw new Error(`Category not found: ${resolvedCategoryId}`);
+        }
+
+        // Apply field selection
+        const filtered_groups = filterCategoryGroupsWithCategories(
+          category_groups.map(group => ({
+            ...group,
+            categories: group.categories.filter(cat => cat.id === resolvedCategoryId),
+          })).filter(group => group.categories.length > 0),
+          { includeHidden: true, includeDeleted: true },
+          { includeHidden: true, includeDeleted: true },
+          args.full ?? false,
+        );
+
+        const category = (filtered_groups[0] as any)?.categories[0];
+
+        // Add formatted currency amounts if full=true
+        const currencyFormat = await getCurrencyFormat();
+        const formattedResponse = addFormattedAmounts({ data: { category } }, currencyFormat);
+
+        return successResult(
+          `Category ${resolvedCategoryId} for budget ${budgetId}`,
           formattedResponse,
         );
       } catch (error) {

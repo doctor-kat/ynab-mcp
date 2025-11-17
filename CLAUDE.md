@@ -93,12 +93,12 @@ const result = await updateTransaction({
 ```
 
 ### MCP Tools:
-The server registers 38 tools across all YNAB API endpoints and change management:
+The server registers 41 tools across all YNAB API endpoints and change management:
 - 1 user tool (get user info)
 - 3 budget tools (list, get by ID, get settings)
 - **3 budget context tools** (get context, set active budget, refresh cache)
 - 2 account tools (list, create)
-- 4 category tools (list, update, get month category, update month category)
+- **7 category tools** (get categories, get category groups, get categories by group, get single category, update category, get month category, update month category)
 - 2 payee tools (list, update)
 - 2 payee location tools (list, get by payee)
 - 2 month tools (list months, get month detail)
@@ -416,6 +416,102 @@ await Promise.all([
 
 This ensures all reference data is pre-loaded before the first MCP tool call.
 
+### Category Tools and Filtering:
+
+The server provides optimized category tools with built-in filtering and field selection to reduce response sizes:
+
+#### Core Strategy:
+- **Smart defaults**: Exclude hidden/deleted categories by default (reduces noise)
+- **Field selection**: Minimal fields by default; full fields only when requested
+- **Name-based resolution**: Accept category names or IDs for flexible querying
+- **Focused tools**: Purpose-built tools for specific use cases (groups, single category, etc.)
+
+#### Available Tools:
+
+**`ynab.getCategories`** - Get all categories grouped by category group
+- **Default behavior**: Returns minimal fields, excludes hidden/deleted categories
+- **Filtering options**:
+  - `categoryGroupId` / `categoryGroupName`: Filter to specific group
+  - `categoryId` / `categoryName`: Filter to specific category
+  - `includeHidden` (default: false): Include hidden categories
+  - `includeDeleted` (default: false): Include deleted categories
+  - `namePattern`: Case-insensitive substring match on category names
+  - `full` (default: false): Include all fields (budgeted, activity, balance, goal data)
+- **Use when**: You need all categories or multiple groups
+- **Recommendation**: Use getCategoryGroups or getCategoriesByGroup for smaller payloads
+
+**`ynab.getCategoryGroups`** - Get category group metadata only
+- **Returns**: id, name, hidden, deleted for each group (no nested categories)
+- **Filtering options**:
+  - `includeHidden` (default: false)
+  - `includeDeleted` (default: false)
+- **Use when**: You only need group names/IDs for selection or reference
+
+**`ynab.getCategoriesByGroup`** - Get categories within a specific group
+- **Parameters**: `categoryGroupId` / `categoryGroupName` (required, mutually exclusive)
+- **Filtering options**: Same as `getCategories` (includeHidden, includeDeleted, namePattern, full)
+- **Use when**: You know which group contains the categories you need
+- **Benefit**: Much smaller response than full getCategories
+
+**`ynab.getCategory`** - Get a single category by ID or name
+- **Parameters**: `categoryId` / `categoryName` (required, mutually exclusive)
+- **Filtering options**: `full` (default: false)
+- **Use when**: You need information about one specific category
+- **Benefit**: Minimal response, perfect for lookups
+
+#### Field Selection:
+
+**Minimal fields (default, `full=false`):**
+- id, name, category_group_id, category_group_name, hidden, deleted
+- Reduces response size by ~60% for typical budgets
+
+**Full fields (`full=true`):**
+- All minimal fields PLUS:
+- budgeted, activity, balance (with _formatted versions)
+- Goal data: goal_type, goal_target, goal_under_funded, goal_overall_funded, etc.
+- Note, timestamps, and other metadata
+
+#### Example Usage:
+
+```typescript
+// Get all category groups (minimal, fast)
+const groups = await ynab.getCategoryGroups();
+// Returns: [{id, name, hidden, deleted}, ...]
+
+// Get categories in "Monthly Bills" group (minimal)
+const bills = await ynab.getCategoriesByGroup({
+  categoryGroupName: "Monthly Bills"
+});
+// Returns: {data: {categories: [{id, name, ...}, ...]}}
+
+// Get "Groceries" category with budget amounts
+const groceries = await ynab.getCategory({
+  categoryName: "Groceries",
+  full: true
+});
+// Returns: {data: {category: {id, name, budgeted, activity, balance, ...}}}
+
+// Get all categories with filtering
+const active = await ynab.getCategories({
+  includeHidden: false,  // default
+  includeDeleted: false, // default
+  full: false            // default (minimal fields)
+});
+```
+
+#### Name Resolution:
+
+All category tools support name-based lookups using the resolver pattern:
+- **Case-insensitive**: "groceries" matches "Groceries"
+- **Exact match first**: Tries exact match before partial match
+- **Partial match fallback**: "electric" matches "Electric Bill"
+- **Error on not found**: Throws clear error if name doesn't resolve
+
+#### Implementation Details:
+- **Resolver**: `src/tools/resolvers.ts` - `resolveCategoryId()`, `resolveCategoryGroupId()`
+- **Filters**: `src/utils/category-filters.ts` - Filtering and field selection logic
+- **Cache-powered**: All tools use cached category data (delta-based, minimal API calls)
+
 ### Currency Formatting:
 
 The server automatically formats all monetary amounts in MCP tool responses for improved readability:
@@ -528,7 +624,7 @@ const review = await ynab.reviewChanges();
 **Applied Tools:**
 - Transactions: `getTransactions`, `createTransaction`, `updateTransactions`, `importTransactions`, `deleteTransaction`
 - Accounts: `getAccounts`, `createAccount`
-- Categories: `getCategories`, `updateCategory`, `getMonthCategory`, `updateMonthCategory`
+- Categories: `getCategories`, `getCategoryGroups`, `getCategoriesByGroup`, `getCategory`, `updateCategory`, `getMonthCategory`, `updateMonthCategory`
 - Months: `getMonths`, `getMonthDetail`
 - Budgets: `getBudgets`, `getBudgetById`
 - Scheduled transactions: All scheduled transaction tools
