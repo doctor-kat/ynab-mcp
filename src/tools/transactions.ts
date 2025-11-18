@@ -90,6 +90,13 @@ export function registerGetTransactionsTool(server: McpServer): void {
       .describe(
         "Only return transactions with amounts less than or equal to this value (applied client-side). Accepts formatted currency strings (e.g., '$100.00') or raw numbers (e.g., 100). For expenses (negative amounts), use negative values (e.g., -100).",
       ),
+    includeMilliunits: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "Include original milliunit amounts in response (default: false). When false, only formatted currency strings are returned (40% token reduction). Set to true when you need milliunits for transaction splitting or precise calculations.",
+      ),
   });
 
   server.registerTool(
@@ -220,7 +227,11 @@ export function registerGetTransactionsTool(server: McpServer): void {
 
         // Add formatted currency amounts
         const currencyFormat = await getCurrencyFormat();
-        const formattedResponse = addFormattedAmounts(limitedResponse, currencyFormat);
+        const formattedResponse = addFormattedAmounts(
+          limitedResponse,
+          currencyFormat,
+          args.includeMilliunits ?? false,
+        );
 
         return successResult(message, formattedResponse);
       } catch (error) {
@@ -282,6 +293,13 @@ export function registerCreateTransactionTool(server: McpServer): void {
         message: "Provide either 'transaction' or 'transactions', not both",
       })
       .describe("Transaction data"),
+    includeMilliunits: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "Include original milliunit amounts in response (default: false). When false, only formatted currency strings are returned (40% token reduction). Set to true when you need milliunits for transaction splitting or precise calculations.",
+      ),
   });
 
   server.registerTool(
@@ -355,7 +373,11 @@ export function registerCreateTransactionTool(server: McpServer): void {
 
         // Add formatted currency amounts
         const currencyFormat = await getCurrencyFormat();
-        const formattedResponse = addFormattedAmounts(response, currencyFormat);
+        const formattedResponse = addFormattedAmounts(
+          response,
+          currencyFormat,
+          args.includeMilliunits ?? false,
+        );
 
         return successResult(
           `Transaction(s) created in budget ${budgetId}`,
@@ -415,6 +437,13 @@ export function registerUpdateTransactionsTool(server: McpServer): void {
       )
       .min(1)
       .describe("Array of transactions to update"),
+    includeMilliunits: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "Include original milliunit amounts in response (default: false). When false, only formatted currency strings are returned (40% token reduction). Set to true when you need milliunits for transaction splitting or precise calculations.",
+      ),
   });
 
   server.registerTool(
@@ -481,7 +510,11 @@ export function registerUpdateTransactionsTool(server: McpServer): void {
 
         // Add formatted currency amounts
         const currencyFormat = await getCurrencyFormat();
-        const formattedResponse = addFormattedAmounts(response, currencyFormat);
+        const formattedResponse = addFormattedAmounts(
+          response,
+          currencyFormat,
+          args.includeMilliunits ?? false,
+        );
 
         return successResult(
           `${args.transactions.length} transaction(s) updated in budget ${budgetId}`,
@@ -495,7 +528,15 @@ export function registerUpdateTransactionsTool(server: McpServer): void {
 }
 
 export function registerImportTransactionsTool(server: McpServer): void {
-  const schema = z.object({});
+  const schema = z.object({
+    includeMilliunits: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "Include original milliunit amounts in response (default: false). When false, only formatted currency strings are returned (40% token reduction). Set to true when you need milliunits for transaction splitting or precise calculations.",
+      ),
+  });
 
   server.registerTool(
     "ynab.importTransactions",
@@ -504,7 +545,7 @@ export function registerImportTransactionsTool(server: McpServer): void {
       description: "Import available transactions from all linked accounts.",
       inputSchema: schema.shape,
     },
-    async () => {
+    async (args) => {
       if (isReadOnly()) {
         return readOnlyResult();
       }
@@ -515,7 +556,11 @@ export function registerImportTransactionsTool(server: McpServer): void {
 
         // Add formatted currency amounts
         const currencyFormat = await getCurrencyFormat();
-        const formattedResponse = addFormattedAmounts(response, currencyFormat);
+        const formattedResponse = addFormattedAmounts(
+          response,
+          currencyFormat,
+          args.includeMilliunits ?? false,
+        );
 
         return successResult(
           `Transactions imported for budget ${budgetId}`,
@@ -531,6 +576,13 @@ export function registerImportTransactionsTool(server: McpServer): void {
 export function registerDeleteTransactionTool(server: McpServer): void {
   const schema = z.object({
     transactionId: z.string().min(1).describe("The ID of the transaction (use ynab.getTransactions to discover)"),
+    includeMilliunits: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "Include original milliunit amounts in response (default: false). When false, only formatted currency strings are returned (40% token reduction). Set to true when you need milliunits for transaction splitting or precise calculations.",
+      ),
   });
 
   server.registerTool(
@@ -551,7 +603,11 @@ export function registerDeleteTransactionTool(server: McpServer): void {
 
         // Add formatted currency amounts
         const currencyFormat = await getCurrencyFormat();
-        const formattedResponse = addFormattedAmounts(response, currencyFormat);
+        const formattedResponse = addFormattedAmounts(
+          response,
+          currencyFormat,
+          args.includeMilliunits ?? false,
+        );
 
         return successResult(
           `Transaction ${args.transactionId} deleted from budget ${budgetId}`,

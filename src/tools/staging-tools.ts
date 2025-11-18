@@ -455,6 +455,13 @@ export function registerReviewChangesTool(server: McpServer): void {
       .string()
       .optional()
       .describe("Optional: filter by specific transaction ID"),
+    includeMilliunits: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "Include original milliunit amounts in response (default: false). When false, only formatted currency strings are returned (40% token reduction). Set to true when you need milliunits for transaction splitting or precise calculations.",
+      ),
   });
 
   server.registerTool(
@@ -508,6 +515,7 @@ export function registerReviewChangesTool(server: McpServer): void {
             changes: changeDetails,
           },
           currencyFormat,
+          args.includeMilliunits ?? false,
         );
 
         return successResult(

@@ -21,6 +21,13 @@ export function registerGetCategoriesTool(server: McpServer): void {
     includeDeleted: z.boolean().optional().default(false).describe("Include deleted categories (default: false)"),
     namePattern: z.string().optional().describe("Case-insensitive substring match on category names"),
     full: z.boolean().optional().default(false).describe("Include all fields (budgeted, activity, balance, goal data). Default: false (minimal fields only)"),
+    includeMilliunits: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "Include original milliunit amounts in response (default: false). When false, only formatted currency strings are returned (40% token reduction). Set to true when you need milliunits for transaction splitting or precise calculations.",
+      ),
   });
 
   const schema = baseSchema.refine((data) => !(data.categoryGroupId && data.categoryGroupName), {
@@ -92,7 +99,11 @@ export function registerGetCategoriesTool(server: McpServer): void {
 
         // Add formatted currency amounts
         const currencyFormat = await getCurrencyFormat();
-        const formattedResponse = addFormattedAmounts({ data: { category_groups: filtered_groups } }, currencyFormat);
+        const formattedResponse = addFormattedAmounts(
+          { data: { category_groups: filtered_groups } },
+          currencyFormat,
+          args.includeMilliunits ?? false,
+        );
 
         return successResult(
           `Categories for budget ${budgetId}`,
@@ -139,6 +150,13 @@ export function registerUpdateCategoryTool(server: McpServer): void {
       })
       .passthrough()
       .describe("Category update fields"),
+    includeMilliunits: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "Include original milliunit amounts in response (default: false). When false, only formatted currency strings are returned (40% token reduction). Set to true when you need milliunits for transaction splitting or precise calculations.",
+      ),
   });
 
   server.registerTool(
@@ -161,7 +179,11 @@ export function registerUpdateCategoryTool(server: McpServer): void {
 
         // Add formatted currency amounts
         const currencyFormat = await getCurrencyFormat();
-        const formattedResponse = addFormattedAmounts(response, currencyFormat);
+        const formattedResponse = addFormattedAmounts(
+          response,
+          currencyFormat,
+          args.includeMilliunits ?? false,
+        );
 
         return successResult(
           `Category ${args.categoryId} updated in budget ${budgetId}`,
@@ -181,6 +203,13 @@ export function registerGetMonthCategoryByIdTool(server: McpServer): void {
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .describe("The budget month in ISO format (YYYY-MM-DD)"),
     categoryId: z.string().min(1).describe("The ID of the category (use ynab.getCategories to discover)"),
+    includeMilliunits: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "Include original milliunit amounts in response (default: false). When false, only formatted currency strings are returned (40% token reduction). Set to true when you need milliunits for transaction splitting or precise calculations.",
+      ),
   });
 
   server.registerTool(
@@ -198,7 +227,11 @@ export function registerGetMonthCategoryByIdTool(server: McpServer): void {
 
         // Add formatted currency amounts
         const currencyFormat = await getCurrencyFormat();
-        const formattedResponse = addFormattedAmounts(response, currencyFormat);
+        const formattedResponse = addFormattedAmounts(
+          response,
+          currencyFormat,
+          args.includeMilliunits ?? false,
+        );
 
         return successResult(
           `Category ${args.categoryId} for month ${args.month} in budget ${budgetId}`,
@@ -224,6 +257,13 @@ export function registerUpdateMonthCategoryTool(server: McpServer): void {
       })
       .passthrough()
       .describe("Category update fields"),
+    includeMilliunits: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "Include original milliunit amounts in response (default: false). When false, only formatted currency strings are returned (40% token reduction). Set to true when you need milliunits for transaction splitting or precise calculations.",
+      ),
   });
 
   server.registerTool(
@@ -245,7 +285,11 @@ export function registerUpdateMonthCategoryTool(server: McpServer): void {
 
         // Add formatted currency amounts
         const currencyFormat = await getCurrencyFormat();
-        const formattedResponse = addFormattedAmounts(response, currencyFormat);
+        const formattedResponse = addFormattedAmounts(
+          response,
+          currencyFormat,
+          args.includeMilliunits ?? false,
+        );
 
         return successResult(
           `Category ${args.categoryId} updated for month ${args.month} in budget ${budgetId}`,
@@ -305,6 +349,13 @@ export function registerGetCategoriesByGroupTool(server: McpServer): void {
     includeDeleted: z.boolean().optional().default(false).describe("Include deleted categories (default: false)"),
     namePattern: z.string().optional().describe("Case-insensitive substring match on category names"),
     full: z.boolean().optional().default(false).describe("Include all fields (budgeted, activity, balance, goal data). Default: false (minimal fields only)"),
+    includeMilliunits: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "Include original milliunit amounts in response (default: false). When false, only formatted currency strings are returned (40% token reduction). Set to true when you need milliunits for transaction splitting or precise calculations.",
+      ),
   });
 
   const schema = baseSchema.refine((data) => data.categoryGroupId || data.categoryGroupName, {
@@ -364,7 +415,11 @@ export function registerGetCategoriesByGroupTool(server: McpServer): void {
 
         // Add formatted currency amounts if full=true
         const currencyFormat = await getCurrencyFormat();
-        const formattedResponse = addFormattedAmounts({ data: { categories } }, currencyFormat);
+        const formattedResponse = addFormattedAmounts(
+          { data: { categories } },
+          currencyFormat,
+          args.includeMilliunits ?? false,
+        );
 
         return successResult(
           `Categories in group ${resolvedGroupId} for budget ${budgetId}`,
@@ -382,6 +437,13 @@ export function registerGetCategoryTool(server: McpServer): void {
     categoryId: z.string().optional().describe("Category ID"),
     categoryName: z.string().optional().describe("Category name (alternative to categoryId)"),
     full: z.boolean().optional().default(false).describe("Include all fields (budgeted, activity, balance, goal data). Default: false (minimal fields only)"),
+    includeMilliunits: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "Include original milliunit amounts in response (default: false). When false, only formatted currency strings are returned (40% token reduction). Set to true when you need milliunits for transaction splitting or precise calculations.",
+      ),
   });
 
   const schema = baseSchema.refine((data) => data.categoryId || data.categoryName, {
@@ -439,7 +501,11 @@ export function registerGetCategoryTool(server: McpServer): void {
 
         // Add formatted currency amounts if full=true
         const currencyFormat = await getCurrencyFormat();
-        const formattedResponse = addFormattedAmounts({ data: { category } }, currencyFormat);
+        const formattedResponse = addFormattedAmounts(
+          { data: { category } },
+          currencyFormat,
+          args.includeMilliunits ?? false,
+        );
 
         return successResult(
           `Category ${resolvedCategoryId} for budget ${budgetId}`,

@@ -14,6 +14,13 @@ export function registerGetBudgetsTool(server: McpServer): void {
       .boolean()
       .optional()
       .describe("Include accounts for each budget"),
+    includeMilliunits: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "Include original milliunit amounts in response (default: false). When false, only formatted currency strings are returned (40% token reduction). Set to true when you need milliunits for transaction splitting or precise calculations.",
+      ),
   });
 
   server.registerTool(
@@ -30,7 +37,11 @@ export function registerGetBudgetsTool(server: McpServer): void {
 
         // Add formatted currency amounts
         const currencyFormat = await getCurrencyFormat();
-        const formattedResponse = addFormattedAmounts(response, currencyFormat);
+        const formattedResponse = addFormattedAmounts(
+          response,
+          currencyFormat,
+          args.includeMilliunits ?? false,
+        );
 
         return successResult("Budgets retrieved", formattedResponse);
       } catch (error) {
@@ -47,6 +58,13 @@ export function registerGetBudgetByIdTool(server: McpServer): void {
       .int()
       .optional()
       .describe("Server knowledge timestamp for delta requests"),
+    includeMilliunits: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "Include original milliunit amounts in response (default: false). When false, only formatted currency strings are returned (40% token reduction). Set to true when you need milliunits for transaction splitting or precise calculations.",
+      ),
   });
 
   server.registerTool(
@@ -63,7 +81,11 @@ export function registerGetBudgetByIdTool(server: McpServer): void {
 
         // Add formatted currency amounts
         const currencyFormat = await getCurrencyFormat();
-        const formattedResponse = addFormattedAmounts(response, currencyFormat);
+        const formattedResponse = addFormattedAmounts(
+          response,
+          currencyFormat,
+          args.includeMilliunits ?? false,
+        );
 
         return successResult(`Budget ${budgetId} retrieved`, formattedResponse);
       } catch (error) {

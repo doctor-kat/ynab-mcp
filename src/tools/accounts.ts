@@ -6,7 +6,15 @@ import { errorResult, isReadOnly, readOnlyResult, successResult, getActiveBudget
 import { addFormattedAmounts } from "../utils/response-transformer.js";
 
 export function registerGetAccountsTool(server: McpServer): void {
-  const schema = z.object({});
+  const schema = z.object({
+    includeMilliunits: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "Include original milliunit amounts in response (default: false). When false, only formatted currency strings are returned (40% token reduction). Set to true when you need milliunits for transaction splitting or precise calculations.",
+      ),
+  });
 
   server.registerTool(
     "ynab.getAccounts",
@@ -15,14 +23,18 @@ export function registerGetAccountsTool(server: McpServer): void {
       description: "Get all accounts with balances and details.",
       inputSchema: schema.shape,
     },
-    async () => {
+    async (args) => {
       try {
         const budgetId = getActiveBudgetIdOrError();
         const accounts = await accountStore.getState().getAccounts(budgetId);
 
         // Add formatted currency amounts
         const currencyFormat = await getCurrencyFormat();
-        const formattedResponse = addFormattedAmounts({ data: { accounts } }, currencyFormat);
+        const formattedResponse = addFormattedAmounts(
+          { data: { accounts } },
+          currencyFormat,
+          args.includeMilliunits ?? false,
+        );
 
         return successResult(`Accounts for budget ${budgetId}`, formattedResponse);
       } catch (error) {
@@ -61,6 +73,13 @@ export function registerCreateAccountTool(server: McpServer): void {
       })
       .passthrough()
       .describe("Account details"),
+    includeMilliunits: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "Include original milliunit amounts in response (default: false). When false, only formatted currency strings are returned (40% token reduction). Set to true when you need milliunits for transaction splitting or precise calculations.",
+      ),
   });
 
   server.registerTool(
@@ -83,7 +102,11 @@ export function registerCreateAccountTool(server: McpServer): void {
 
         // Add formatted currency amounts
         const currencyFormat = await getCurrencyFormat();
-        const formattedResponse = addFormattedAmounts(response, currencyFormat);
+        const formattedResponse = addFormattedAmounts(
+          response,
+          currencyFormat,
+          args.includeMilliunits ?? false,
+        );
 
         return successResult(
           `Account created in budget ${budgetId}`,

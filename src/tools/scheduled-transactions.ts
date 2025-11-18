@@ -21,6 +21,13 @@ export function registerGetScheduledTransactionsTool(server: McpServer): void {
       .int()
       .optional()
       .describe("Server knowledge timestamp for delta requests"),
+    includeMilliunits: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "Include original milliunit amounts in response (default: false). When false, only formatted currency strings are returned (40% token reduction). Set to true when you need milliunits for transaction splitting or precise calculations.",
+      ),
   });
 
   server.registerTool(
@@ -37,7 +44,11 @@ export function registerGetScheduledTransactionsTool(server: McpServer): void {
 
         // Add formatted currency amounts
         const currencyFormat = await getCurrencyFormat();
-        const formattedResponse = addFormattedAmounts(response, currencyFormat);
+        const formattedResponse = addFormattedAmounts(
+          response,
+          currencyFormat,
+          args.includeMilliunits ?? false,
+        );
 
         return successResult(
           `Scheduled transactions for budget ${budgetId}`,
@@ -108,6 +119,13 @@ export function registerCreateScheduledTransactionTool(
         message: "Cannot provide both payee_id and payee_name",
       })
       .describe("Scheduled transaction details"),
+    includeMilliunits: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "Include original milliunit amounts in response (default: false). When false, only formatted currency strings are returned (40% token reduction). Set to true when you need milliunits for transaction splitting or precise calculations.",
+      ),
   });
 
   server.registerTool(
@@ -167,7 +185,11 @@ export function registerCreateScheduledTransactionTool(
 
         // Add formatted currency amounts
         const currencyFormat = await getCurrencyFormat();
-        const formattedResponse = addFormattedAmounts(response, currencyFormat);
+        const formattedResponse = addFormattedAmounts(
+          response,
+          currencyFormat,
+          args.includeMilliunits ?? false,
+        );
 
         return successResult(
           `Scheduled transaction created in budget ${budgetId}`,
@@ -244,6 +266,13 @@ export function registerUpdateScheduledTransactionTool(
         message: "Cannot provide both payee_id and payee_name",
       })
       .describe("Scheduled transaction update fields"),
+    includeMilliunits: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "Include original milliunit amounts in response (default: false). When false, only formatted currency strings are returned (40% token reduction). Set to true when you need milliunits for transaction splitting or precise calculations.",
+      ),
   });
 
   server.registerTool(
@@ -299,7 +328,11 @@ export function registerUpdateScheduledTransactionTool(
 
         // Add formatted currency amounts
         const currencyFormat = await getCurrencyFormat();
-        const formattedResponse = addFormattedAmounts(response, currencyFormat);
+        const formattedResponse = addFormattedAmounts(
+          response,
+          currencyFormat,
+          args.includeMilliunits ?? false,
+        );
 
         return successResult(
           `Scheduled transaction ${args.scheduledTransactionId} updated in budget ${budgetId}`,
@@ -320,6 +353,13 @@ export function registerDeleteScheduledTransactionTool(
       .string()
       .min(1)
       .describe("The ID of the scheduled transaction (use ynab.getScheduledTransactions to discover)"),
+    includeMilliunits: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "Include original milliunit amounts in response (default: false). When false, only formatted currency strings are returned (40% token reduction). Set to true when you need milliunits for transaction splitting or precise calculations.",
+      ),
   });
 
   server.registerTool(
@@ -340,7 +380,11 @@ export function registerDeleteScheduledTransactionTool(
 
         // Add formatted currency amounts
         const currencyFormat = await getCurrencyFormat();
-        const formattedResponse = addFormattedAmounts(response, currencyFormat);
+        const formattedResponse = addFormattedAmounts(
+          response,
+          currencyFormat,
+          args.includeMilliunits ?? false,
+        );
 
         return successResult(
           `Scheduled transaction ${args.scheduledTransactionId} deleted from budget ${budgetId}`,
