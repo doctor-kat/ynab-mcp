@@ -19,6 +19,7 @@ import { addFormattedAmounts } from "../utils/response-transformer.js";
 import { categoryStore, payeeStore } from "../cache/index.js";
 import { formatMilliunits } from "../utils/currency-formatter.js";
 import { resolveCategoryId } from "./resolvers.js";
+import { getSplitValidationHint } from "../utils/error-hints.js";
 
 /**
  * Stage a categorization change without applying it
@@ -225,10 +226,15 @@ export function registerStageSplitTool(server: McpServer): void {
           0,
         );
         if (total !== transaction.amount) {
+          const currencyFormat = await getCurrencyFormat();
+          const hint = getSplitValidationHint({
+            expectedMilliunits: transaction.amount,
+            actualMilliunits: total,
+            currencyFormat,
+          });
           return errorResult(
-            new Error(
-              `Subtransactions sum (${total}) must equal transaction amount (${transaction.amount})`,
-            ),
+            new Error(hint),
+            { entityType: "transaction", operation: "staging split" },
           );
         }
 

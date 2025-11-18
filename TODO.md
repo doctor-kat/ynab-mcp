@@ -14,11 +14,13 @@ Implement all 32 identified improvements to optimize token usage, improve LLM co
 
 **Completed:** Modified 8 files (response-transformer.ts + 7 tool files), updated 22 tool functions with `includeMilliunits` parameter. Default behavior now returns formatted amounts only, with option to include milliunits when needed for splits/calculations.
 
-### 1.2 Error Handling Enhancement
+### 1.2 Error Handling Enhancement ✅
 
-- [ ] Create src/utils/error-hints.ts with context-aware error messages by HTTP status
-- [ ] Update all errorResult() calls to include actionable hints
-- [ ] Add formatted amounts to validation errors (split sum mismatches)
+- [x] Create src/utils/error-hints.ts with context-aware error messages by HTTP status
+- [x] Update all errorResult() calls to include actionable hints
+- [x] Add formatted amounts to validation errors (split sum mismatches)
+
+**Completed:** Created comprehensive error hint system with context-aware messages for all HTTP status codes (400, 401, 403, 404, 409, 429, 500+). Enhanced errorResult() to automatically include hints and next steps. Added formatted amount validation errors for split transactions showing exact difference in currency format.
 
 ### 1.3 Response Metadata System
 

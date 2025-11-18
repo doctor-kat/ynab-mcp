@@ -14,7 +14,10 @@
       "Bash(pnpm install:*)",
       "WebSearch",
       "Bash(pnpm list:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git restore:*)"
     ],
     "deny": [],
     "ask": []

@@ -3,6 +3,7 @@ import { loadEnv } from "../env.js";
 import { budgetStore } from "../budget/index.js";
 import { settingsStore } from "../cache/index.js";
 import type { CurrencyFormat } from "../api/common/CurrencyFormat.js";
+import { getErrorHint, getNextSteps, type ErrorContext } from "../utils/error-hints.js";
 
 /**
  * Get the active budget ID or throw an error with helpful guidance
@@ -79,9 +80,25 @@ export function successResult(title: string, data: unknown): any {
   };
 }
 
-export function errorResult(error: unknown): any {
+export function errorResult(error: unknown, context?: Partial<ErrorContext>): any {
   if (error instanceof YnabApiError) {
-    const errorMessage = `❌ YNAB API error (${error.status}): ${error.message}`;
+    const errorContext: ErrorContext = {
+      status: error.status,
+      message: error.message,
+      ...context,
+    };
+
+    const hint = getErrorHint(errorContext);
+    const nextSteps = getNextSteps(errorContext);
+
+    const errorMessage = [
+      `❌ YNAB API error (${error.status}): ${error.message}`,
+      "",
+      `💡 ${hint}`,
+      nextSteps.length > 0 ? `\nNext steps:\n${nextSteps.join("\n")}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
 
     return {
       content: [
@@ -90,7 +107,13 @@ export function errorResult(error: unknown): any {
           text: errorMessage,
         },
       ],
-      data: error.details,
+      data: {
+        ...(typeof error.details === "object" && error.details !== null
+          ? error.details
+          : { details: error.details }),
+        hint,
+        nextSteps,
+      },
       isError: true,
     };
   }
@@ -98,11 +121,22 @@ export function errorResult(error: unknown): any {
   const message =
     error instanceof Error ? error.message : JSON.stringify(error, null, 2);
 
+  // Generate hints for non-API errors (validation, resolution, etc.)
+  const errorContext: ErrorContext = {
+    message,
+    ...context,
+  };
+  const hint = getErrorHint(errorContext);
+
+  const errorMessage = hint !== "Review the error message above for details. Check parameter values and try again."
+    ? `❌ ${message}\n\n💡 ${hint}`
+    : `❌ ${message}`;
+
   return {
     content: [
       {
         type: "text",
-        text: `❌ ${message}`,
+        text: errorMessage,
       },
     ],
     data:
@@ -110,6 +144,7 @@ export function errorResult(error: unknown): any {
         ? {
             name: error.name,
             stack: error.stack,
+            hint,
           }
         : error,
     isError: true,
