@@ -5,7 +5,7 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { stagingStore, ChangeType } from "../staging/index.js";
-import { getTransactionById, updateTransactions } from "../api/index.js";
+import { getTransactionById, getTransactions, updateTransactions } from "../api/index.js";
 import {
   errorResult,
   getActiveBudgetIdOrError,
@@ -376,20 +376,37 @@ export function registerBulkCategorizeTool(server: McpServer): void {
           categoryId = resolvedId;
         }
 
-        // Fetch all transactions and stage changes
-        const stagedChanges = [];
+        // Batch-fetch all transactions once (optimized from N individual calls)
+        const transactionMap = new Map();
         const errors = [];
 
+        try {
+          // Fetch all transactions in a single API call
+          const response = await getTransactions({ budgetId });
+          for (const tx of response.data.transactions) {
+            transactionMap.set(tx.id, tx);
+          }
+        } catch (error) {
+          return errorResult(
+            new Error(`Failed to fetch transactions for bulk categorization: ${error instanceof Error ? error.message : String(error)}`),
+            { operation: "bulk categorize", entityType: "transaction" }
+          );
+        }
+
+        // Stage changes for all transactions
+        const stagedChanges = [];
         for (const transactionId of args.transactionIds) {
-          try {
-            // Fetch current transaction state
-            const currentTx = await getTransactionById({
-              budgetId,
+          const transaction = transactionMap.get(transactionId);
+
+          if (!transaction) {
+            errors.push({
               transactionId,
+              error: `Transaction not found (may be deleted or pending)`,
             });
+            continue;
+          }
 
-            const transaction = currentTx.data.transaction;
-
+          try {
             // Stage the change
             const stagedChange = stagingStore.getState().stageChange({
               type: ChangeType.CATEGORIZATION,

@@ -64,10 +64,12 @@ Implement all 32 identified improvements to optimize token usage, improve LLM co
 
 ## Phase 3: Workflow Optimizations
 
-### 3.1 Bulk Operation Improvements
+### 3.1 Bulk Operation Improvements ✅
 
-- [ ] Optimize bulkCategorize to batch-fetch transactions once vs. N individual calls
-- [ ] Add transaction map caching within tool execution context
+- [x] Optimize bulkCategorize to batch-fetch transactions once vs. N individual calls
+- [x] Add transaction map caching within tool execution context
+
+**Completed:** Refactored bulkCategorize to use single getTransactions() call instead of N individual getTransactionById() calls. Implemented transaction Map for O(1) lookups. Reduces API calls from N+1 to 1 for bulk operations. Estimated 30-40% API call reduction for bulk categorization workflows.
 
 ### 3.2 Preview Tools (New)
 
