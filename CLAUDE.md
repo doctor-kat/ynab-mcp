@@ -93,7 +93,7 @@ const result = await updateTransaction({
 ```
 
 ### MCP Tools:
-The server registers 41 tools across all YNAB API endpoints and change management:
+The server registers 42 tools across all YNAB API endpoints and change management:
 - 1 user tool (get user info)
 - 3 budget tools (list, get by ID, get settings)
 - **3 budget context tools** (get context, set active budget, refresh cache)
@@ -104,7 +104,7 @@ The server registers 41 tools across all YNAB API endpoints and change managemen
 - 2 month tools (list months, get month detail)
 - 5 transaction tools (list, create, update multiple, import, delete)
 - 4 scheduled transaction tools (list, create, update, delete)
-- **5 staging tools** (stage categorization, stage split, review staged changes, apply changes, clear staged changes)
+- **6 staging tools** (stage categorization, stage split, bulk categorize, get staged changes, apply staged changes, clear staged changes)
 - **5 cache management tools** (refresh payee cache, refresh category cache, refresh account cache, refresh settings cache, clear all caches)
 
 All tools follow the naming pattern `ynab.{operationName}` (e.g., `ynab.getTransactions`, `ynab.updateTransaction`, `ynab.getAvailableBudgets`)
@@ -114,7 +114,7 @@ All tools follow the naming pattern `ynab.{operationName}` (e.g., `ynab.getTrans
 The server implements a **stage-review-apply workflow** for transaction modifications to prevent accidental mis-categorizations or incorrect splits:
 
 #### Workflow:
-1. **Stage**: Propose changes without applying them (`ynab.stageCategorization`, `ynab.stageSplit`)
+1. **Stage**: Propose changes without applying them (`ynab.stageCategorization`, `ynab.stageSplit`, `ynab.bulkCategorize`)
 2. **Review**: Inspect proposed changes before committing (`ynab.getStagedChanges`)
 3. **Apply**: Commit staged changes to YNAB API (`ynab.applyStagedChanges`)
 4. **Clear**: Discard unwanted staged changes (`ynab.clearStagedChanges`)
@@ -131,14 +131,22 @@ The server implements a **stage-review-apply workflow** for transaction modifica
 - Validates that subtransactions sum to the total transaction amount
 - Does not apply to YNAB until approved
 
+**`ynab.bulkCategorize`**
+- Stages category changes for multiple transactions at once
+- More efficient than staging individually (single API call to fetch all transactions)
+- Optional memo update for all transactions
+- Returns success/failure status for each transaction
+
 **`ynab.getStagedChanges`**
 - Lists all staged changes awaiting approval
 - Shows original state vs. proposed changes
 - Optional filtering by transaction ID
+- Supports `includeMilliunits` parameter (default: false) for token-efficient responses
 
 **`ynab.applyStagedChanges`**
 - Commits staged changes to YNAB API
 - Can apply all staged changes or specific change IDs
+- Uses batch update endpoint for efficiency
 - Returns success/failure status for each change
 - Removes successfully applied changes from staging
 
@@ -476,20 +484,20 @@ The server provides optimized category tools with built-in filtering and field s
 ```typescript
 // Get all category groups (minimal, fast)
 const groups = await ynab.getCategoryGroups();
-// Returns: [{id, name, hidden, deleted}, ...]
+// Returns: {category_groups: [{id, name, hidden, deleted}, ...], metadata: {...}}
 
 // Get categories in "Monthly Bills" group (minimal)
 const bills = await ynab.getCategoriesByGroup({
   categoryGroupName: "Monthly Bills"
 });
-// Returns: {data: {categories: [{id, name, ...}, ...]}}
+// Returns: {category_groups: [{...}], metadata: {...}}
 
 // Get "Groceries" category with budget amounts
 const groceries = await ynab.getCategory({
   categoryName: "Groceries",
   full: true
 });
-// Returns: {data: {category: {id, name, budgeted, activity, balance, ...}}}
+// Returns: {category: {id, name, budgeted, activity, balance, ...}, metadata: {...}}
 
 // Get all categories with filtering
 const active = await ynab.getCategories({
@@ -633,6 +641,198 @@ const review = await ynab.getStagedChanges();
 **Testing:** Comprehensive tests in `tests/utils/`:
 - `currency-formatter.test.ts` - Tests USD, EUR, JPY formatting with edge cases
 - `response-transformer.test.ts` - Tests transformation of nested structures
+
+### Response Format Control:
+
+The server provides control over response formats to optimize token usage:
+
+#### includeMilliunits Parameter
+
+Most amount-returning tools accept an `includeMilliunits` parameter (default: `false`):
+
+**Default behavior (includeMilliunits=false):**
+- Returns only formatted currency strings (`amount_formatted`, `balance_formatted`, etc.)
+- Reduces response size by approximately 40%
+- Optimal for read-only operations and display
+
+**With milliunits (includeMilliunits=true):**
+- Returns both original milliunits AND formatted strings
+- Required for transaction splitting (must sum exactly)
+- Required for precise calculations
+
+**Example:**
+```typescript
+// Default: formatted only (token-efficient)
+const response = await ynab.getTransactions({
+  sinceDate: "2025-01-01"
+});
+// Returns: { transactions: [{ amount_formatted: "-$50.00", ... }], metadata: {...} }
+
+// With milliunits: both formats (for splits/calculations)
+const response = await ynab.getTransactions({
+  sinceDate: "2025-01-01",
+  includeMilliunits: true
+});
+// Returns: { transactions: [{ amount: -50000, amount_formatted: "-$50.00", ... }], metadata: {...} }
+```
+
+**Tools with includeMilliunits parameter:**
+- `ynab.getTransactions`, `ynab.createTransaction`, `ynab.updateTransactions`, `ynab.importTransactions`, `ynab.deleteTransaction`
+- `ynab.getAccounts`, `ynab.createAccount`
+- `ynab.getCategories`, `ynab.getCategoryGroups`, `ynab.getCategoriesByGroup`, `ynab.getCategory`, `ynab.updateCategory`, `ynab.getMonthCategory`, `ynab.updateMonthCategory`
+- `ynab.getMonths`, `ynab.getMonthDetail`
+- `ynab.getBudgetDetails`, `ynab.getBudgetById`
+- `ynab.getScheduledTransactions`, `ynab.createScheduledTransaction`, `ynab.updateScheduledTransaction`, `ynab.deleteScheduledTransaction`
+- `ynab.getStagedChanges`
+
+**When to use milliunits:**
+- Transaction splitting (subtransactions must sum exactly to parent amount)
+- Precise calculations or comparisons
+- When you need to modify amounts programmatically
+
+**When formatted-only is sufficient:**
+- Displaying transactions to users
+- Generating reports or summaries
+- Read-only operations
+- Most categorization workflows
+
+### Response Metadata:
+
+All list-returning tools include metadata for better context:
+
+**Structure:**
+```json
+{
+  "transactions": [...],
+  "metadata": {
+    "count": 42,
+    "filters": {
+      "sinceDate": "2025-01-01",
+      "categoryId": "xyz"
+    },
+    "cached": false
+  }
+}
+```
+
+**Metadata fields:**
+- `count`: Number of items returned
+- `filters`: Active query parameters (when applicable)
+- `cached`: Whether data came from cache vs API call
+- `truncated`: Boolean when results were limited (transactions only)
+- `originalCount`: Total before truncation (transactions only)
+
+**Example:**
+```typescript
+const response = await ynab.getCategories({
+  includeHidden: false,
+  includeDeleted: false
+});
+// Returns: {
+//   category_groups: [...],
+//   metadata: {
+//     count: 5,
+//     filters: { includeHidden: false, includeDeleted: false },
+//     cached: true
+//   }
+// }
+```
+
+**Flattened responses:**
+Category tools return flattened structures instead of nested `data` wrappers:
+- `{ category_groups: [...], metadata: {...} }` (not `{ data: { category_groups: [...] } }`)
+- Same pattern for all list-returning tools
+
+### Error Handling and Recovery:
+
+The server provides context-aware error hints to help with error recovery:
+
+#### Error Hint System
+
+All errors include actionable hints based on:
+- HTTP status code (400, 401, 403, 404, 409, 429, 500+)
+- Operation context (entity type, operation being performed)
+- Error message content
+
+**Example error responses:**
+
+**404 Not Found:**
+```
+❌ YNAB API error (404): Transaction not found
+
+💡 Transaction not found. It may have been deleted or the ID is incorrect. Use ynab.getTransactions to find valid transaction IDs.
+
+Next steps:
+1. Use ynab.getTransactions to list all available transactions
+2. Verify the transaction ID is correct
+3. Retry the operation with a valid transaction ID
+```
+
+**400 Bad Request (Invalid Split):**
+```
+❌ Split transaction validation failed:
+• Expected subtransactions to sum to: -$100.00 (-100000 milliunits)
+• Actual subtransactions sum to: -$99.50 (-99500 milliunits)
+• Difference: under by $0.50
+
+Fix: Adjust subtransaction amounts so they sum exactly to -$100.00.
+Remember: 1000 milliunits = 1 currency unit (e.g., $1.00 = 1000 milliunits).
+
+💡 Split transaction validation failed. Subtransactions must sum exactly to the parent transaction amount (in milliunits).
+```
+
+**429 Rate Limit:**
+```
+❌ YNAB API error (429): Rate limit exceeded
+
+💡 Rate limit exceeded. YNAB API limits: 200 requests per hour. Wait before retrying or reduce request frequency.
+
+Next steps:
+1. Wait 60 seconds before retrying
+2. Reduce request frequency if this error persists
+```
+
+#### Common Error Recovery Patterns
+
+**Pattern 1: Entity Not Found**
+```typescript
+// Error: Category not found
+// Recovery: List available categories first
+const categories = await ynab.getCategories();
+// Select correct category ID from response
+const result = await ynab.updateTransaction({
+  transactionId: "txn-123",
+  categoryId: categories.category_groups[0].categories[0].id
+});
+```
+
+**Pattern 2: Invalid Split Amount**
+```typescript
+// Error: Subtransactions sum mismatch
+// Recovery: Use includeMilliunits=true to see exact amounts
+const txn = await ynab.getTransactions({
+  transactionId: "txn-123",
+  includeMilliunits: true
+});
+
+// Use exact milliunits for split
+await ynab.stageSplit({
+  transactionId: "txn-123",
+  subtransactions: [
+    { amount: txn.transactions[0].amount / 2, category_id: "cat-1" },  // Exact half
+    { amount: txn.transactions[0].amount / 2, category_id: "cat-2" }
+  ]
+});
+```
+
+**Pattern 3: Budget Not Set**
+```typescript
+// Error: No active budget set
+// Recovery: List budgets and set active
+const budgets = await ynab.getAvailableBudgets();
+await ynab.setActiveBudget({ budgetId: budgets.budgets[0].id });
+// Now can proceed with operations
+```
 
 ### Testing Approach:
 The project uses a comprehensive multi-layer testing strategy:
