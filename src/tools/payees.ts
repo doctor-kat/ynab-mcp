@@ -40,7 +40,7 @@ export function registerGetPayeesTool(server: McpServer): void {
 
 export function registerUpdatePayeeTool(server: McpServer): void {
   const schema = z.object({
-    payeeId: z.string().min(1).describe("The ID of the payee (use ynab.getPayees to discover)"),
+    payeeId: z.string().min(1).describe("Payee ID. UUID format."),
     payee: z
       .object({
         name: z.string().optional().describe("New payee name"),

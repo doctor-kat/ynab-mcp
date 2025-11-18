@@ -26,9 +26,9 @@ import { getSplitValidationHint } from "../utils/error-hints.js";
  */
 export function registerStageCategorizationTool(server: McpServer): void {
   const schemaBase = z.object({
-    transactionId: z.string().min(1).describe("The transaction ID (use ynab.getTransactions to discover)"),
-    categoryId: z.string().optional().describe("The category ID to assign (use ynab.getCategories to discover)"),
-    categoryName: z.string().optional().describe("The category name to assign (alternative to categoryId)"),
+    transactionId: z.string().min(1).describe("Transaction ID. UUID format."),
+    categoryId: z.string().optional().describe("Category ID to assign. UUID format. Takes priority over categoryName."),
+    categoryName: z.string().optional().describe("Category name to assign. Used only if categoryId not provided. Resolves to existing category or throws error."),
     memo: z.string().optional().describe("Optional memo to update"),
     description: z
       .string()
@@ -157,7 +157,7 @@ export function registerStageCategorizationTool(server: McpServer): void {
  */
 export function registerStageSplitTool(server: McpServer): void {
   const schema = z.object({
-    transactionId: z.string().min(1).describe("The transaction ID (use ynab.getTransactions to discover)"),
+    transactionId: z.string().min(1).describe("Transaction ID. UUID format."),
     subtransactions: z
       .array(
         z
@@ -165,11 +165,11 @@ export function registerStageSplitTool(server: McpServer): void {
             amount: z
               .number()
               .int()
-              .describe("Amount in milliunits (e.g., -12340 for -$12.34)"),
-            payee_id: z.string().optional().describe("Payee ID (use ynab.getPayees to discover)"),
-            payee_name: z.string().optional().describe("Payee name"),
-            category_id: z.string().optional().describe("Category ID (use ynab.getCategories to discover)"),
-            category_name: z.string().optional().describe("Category name (alternative to category_id)"),
+              .describe("Amount in milliunits (1000 milliunits = $1.00). Negative for expenses, positive for income. Example: -12340 for -$12.34"),
+            payee_id: z.string().optional().describe("Payee ID. UUID format. Takes priority over payee_name."),
+            payee_name: z.string().optional().describe("Payee name. Used only if payee_id not provided."),
+            category_id: z.string().optional().describe("Category ID. UUID format. Takes priority over category_name."),
+            category_name: z.string().optional().describe("Category name. Used only if category_id not provided. Resolves to existing category or throws error."),
             memo: z.string().optional().describe("Memo"),
           })
           .refine((data) => !(data.category_id && data.category_name), {
@@ -177,7 +177,7 @@ export function registerStageSplitTool(server: McpServer): void {
           }),
       )
       .min(2)
-      .describe("Array of subtransactions (must sum to total amount)"),
+      .describe("Array of subtransactions for splits. Must sum exactly to parent transaction amount. Example: [{amount: -25000, category_id: 'cat1'}, {amount: -25000, category_id: 'cat2'}]"),
     description: z
       .string()
       .optional()
@@ -330,9 +330,9 @@ export function registerBulkCategorizeTool(server: McpServer): void {
     transactionIds: z
       .array(z.string().min(1))
       .min(1)
-      .describe("Array of transaction IDs to categorize (use ynab.getTransactions to discover)"),
-    categoryId: z.string().optional().describe("The category ID to assign (use ynab.getCategories to discover)"),
-    categoryName: z.string().optional().describe("The category name to assign (alternative to categoryId)"),
+      .describe("Array of transaction IDs to categorize. Each ID in UUID format."),
+    categoryId: z.string().optional().describe("Category ID to assign. UUID format. Takes priority over categoryName."),
+    categoryName: z.string().optional().describe("Category name to assign. Used only if categoryId not provided. Resolves to existing category or throws error."),
     memo: z.string().optional().describe("Optional memo to update on all transactions"),
     description: z
       .string()
@@ -460,7 +460,7 @@ export function registerReviewChangesTool(server: McpServer): void {
     transactionId: z
       .string()
       .optional()
-      .describe("Optional: filter by specific transaction ID"),
+      .describe("Optional: filter by specific transaction ID. UUID format."),
     includeMilliunits: z
       .boolean()
       .optional()
@@ -544,7 +544,7 @@ export function registerApplyChangesTool(server: McpServer): void {
       .array(z.string())
       .optional()
       .describe(
-        "Optional: specific change IDs to apply (if omitted, applies all staged changes)",
+        "Optional: specific change IDs to apply. If omitted, applies all staged changes.",
       ),
   });
 
@@ -675,7 +675,7 @@ export function registerClearChangesTool(server: McpServer): void {
       .array(z.string())
       .optional()
       .describe(
-        "Optional: specific change IDs to clear (if omitted, clears all staged changes)",
+        "Optional: specific change IDs to clear. If omitted, clears all staged changes.",
       ),
   });
 

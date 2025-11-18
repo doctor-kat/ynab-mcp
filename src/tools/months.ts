@@ -69,7 +69,7 @@ export function registerGetBudgetMonthTool(server: McpServer): void {
     month: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .describe("The budget month in ISO format (YYYY-MM-DD)"),
+      .describe("Budget month as first day of month (YYYY-MM-DD). Example: '2025-01-01' for January 2025."),
     includeMilliunits: z
       .boolean()
       .optional()

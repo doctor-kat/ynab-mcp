@@ -44,7 +44,7 @@ export function registerSetActiveBudgetTool(server: McpServer): void {
       .string()
       .min(1)
       .describe(
-        "The ID of the budget to set as active. Must be one of the budgets from ynab.getBudgetContext",
+        "Budget ID to set as active. UUID format. Must be one of the budgets from ynab.getBudgetContext.",
       ),
   });
 

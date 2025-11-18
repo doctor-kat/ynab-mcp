@@ -76,11 +76,11 @@ export function registerCreateAccountTool(server: McpServer): void {
             "medicalDebt",
             "otherDebt",
           ])
-          .describe("Account type"),
+          .describe("Account type. Valid values: 'checking', 'savings', 'cash', 'creditCard', 'lineOfCredit', 'otherAsset', 'otherLiability', 'mortgage', 'autoLoan', 'studentLoan', 'personalLoan', 'medicalDebt', 'otherDebt'."),
         balance: z
           .number()
           .int()
-          .describe("Current account balance in milliunits"),
+          .describe("Current account balance in milliunits (1000 milliunits = $1.00). Example: 50000 for $50.00"),
       })
       .passthrough()
       .describe("Account details"),

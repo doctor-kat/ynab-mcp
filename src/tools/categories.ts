@@ -13,10 +13,10 @@ import { filterCategoryGroupsWithCategories, filterCategoryGroups, selectCategor
 
 export function registerGetCategoriesTool(server: McpServer): void {
   const baseSchema = z.object({
-    categoryGroupId: z.string().optional().describe("Filter by category group ID"),
-    categoryGroupName: z.string().optional().describe("Filter by category group name (alternative to categoryGroupId)"),
-    categoryId: z.string().optional().describe("Filter to specific category ID"),
-    categoryName: z.string().optional().describe("Filter to specific category name (alternative to categoryId)"),
+    categoryGroupId: z.string().optional().describe("Filter by category group ID. UUID format. Takes priority over categoryGroupName."),
+    categoryGroupName: z.string().optional().describe("Filter by category group name. Used only if categoryGroupId not provided. Resolves to existing group or throws error."),
+    categoryId: z.string().optional().describe("Filter to specific category ID. UUID format. Takes priority over categoryName."),
+    categoryName: z.string().optional().describe("Filter to specific category name. Used only if categoryId not provided. Resolves to existing category or throws error."),
     includeHidden: z.boolean().optional().default(false).describe("Include hidden categories (default: false)"),
     includeDeleted: z.boolean().optional().default(false).describe("Include deleted categories (default: false)"),
     namePattern: z.string().optional().describe("Case-insensitive substring match on category names"),
@@ -138,7 +138,7 @@ export function registerGetCategoriesTool(server: McpServer): void {
 
 export function registerUpdateCategoryTool(server: McpServer): void {
   const schema = z.object({
-    categoryId: z.string().min(1).describe("The ID of the category (use ynab.getCategories to discover)"),
+    categoryId: z.string().min(1).describe("Category ID. UUID format."),
     category: z
       .object({
         name: z.string().optional().describe("New category name"),
@@ -147,17 +147,17 @@ export function registerUpdateCategoryTool(server: McpServer): void {
           .number()
           .int()
           .optional()
-          .describe("Budgeted amount in milliunits"),
+          .describe("Budgeted amount in milliunits (1000 milliunits = $1.00). Example: 50000 for $50.00"),
         goal_type: z.string().optional().describe("Goal type"),
         goal_creation_month: z
           .string()
           .optional()
-          .describe("Goal creation month (ISO format)"),
-        goal_target: z.number().int().optional().describe("Goal target amount"),
+          .describe("Goal creation month as first day of month (YYYY-MM-DD). Example: '2025-01-01' for January 2025."),
+        goal_target: z.number().int().optional().describe("Goal target amount in milliunits (1000 milliunits = $1.00). Example: 100000 for $100.00"),
         goal_target_month: z
           .string()
           .optional()
-          .describe("Goal target month (ISO format)"),
+          .describe("Goal target month as first day of month (YYYY-MM-DD). Example: '2025-12-01' for December 2025."),
         goal_percentage_complete: z
           .number()
           .optional()
@@ -221,8 +221,8 @@ export function registerGetMonthCategoryByIdTool(server: McpServer): void {
     month: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .describe("The budget month in ISO format (YYYY-MM-DD)"),
-    categoryId: z.string().min(1).describe("The ID of the category (use ynab.getCategories to discover)"),
+      .describe("Budget month as first day of month (YYYY-MM-DD). Example: '2025-01-01' for January 2025."),
+    categoryId: z.string().min(1).describe("Category ID. UUID format."),
     includeMilliunits: z
       .boolean()
       .optional()
@@ -286,11 +286,11 @@ export function registerUpdateMonthCategoryTool(server: McpServer): void {
     month: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .describe("The budget month in ISO format (YYYY-MM-DD)"),
-    categoryId: z.string().min(1).describe("The ID of the category (use ynab.getCategories to discover)"),
+      .describe("Budget month as first day of month (YYYY-MM-DD). Example: '2025-01-01' for January 2025."),
+    categoryId: z.string().min(1).describe("Category ID. UUID format."),
     category: z
       .object({
-        budgeted: z.number().int().describe("Budgeted amount in milliunits"),
+        budgeted: z.number().int().describe("Budgeted amount in milliunits (1000 milliunits = $1.00). Example: 50000 for $50.00"),
       })
       .passthrough()
       .describe("Category update fields"),
@@ -396,8 +396,8 @@ export function registerGetCategoryGroupsTool(server: McpServer): void {
 
 export function registerGetCategoriesByGroupTool(server: McpServer): void {
   const baseSchema = z.object({
-    categoryGroupId: z.string().optional().describe("Category group ID"),
-    categoryGroupName: z.string().optional().describe("Category group name (alternative to categoryGroupId)"),
+    categoryGroupId: z.string().optional().describe("Category group ID. UUID format. Takes priority over categoryGroupName."),
+    categoryGroupName: z.string().optional().describe("Category group name. Used only if categoryGroupId not provided. Resolves to existing group or throws error."),
     includeHidden: z.boolean().optional().default(false).describe("Include hidden categories (default: false)"),
     includeDeleted: z.boolean().optional().default(false).describe("Include deleted categories (default: false)"),
     namePattern: z.string().optional().describe("Case-insensitive substring match on category names"),
@@ -507,8 +507,8 @@ export function registerGetCategoriesByGroupTool(server: McpServer): void {
 
 export function registerGetCategoryTool(server: McpServer): void {
   const baseSchema = z.object({
-    categoryId: z.string().optional().describe("Category ID"),
-    categoryName: z.string().optional().describe("Category name (alternative to categoryId)"),
+    categoryId: z.string().optional().describe("Category ID. UUID format. Takes priority over categoryName."),
+    categoryName: z.string().optional().describe("Category name. Used only if categoryId not provided. Resolves to existing category or throws error."),
     full: z.boolean().optional().default(false).describe("Include all fields (budgeted, activity, balance, goal data). Default: false (minimal fields only)"),
     includeMilliunits: z
       .boolean()

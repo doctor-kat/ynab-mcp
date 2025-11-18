@@ -33,20 +33,20 @@ import { parseAmount } from "../utils/currency-formatter.js";
 
 export function registerGetTransactionsTool(server: McpServer): void {
   const schema = z.object({
-    accountId: z.string().optional().describe("Filter by account ID (use ynab.getAccounts to discover)"),
-    categoryId: z.string().optional().describe("Filter by category ID (use ynab.getCategories to discover)"),
-    payeeId: z.string().optional().describe("Filter by payee ID (use ynab.getPayees to discover)"),
+    accountId: z.string().optional().describe("Filter by account ID. UUID format."),
+    categoryId: z.string().optional().describe("Filter by category ID. UUID format."),
+    payeeId: z.string().optional().describe("Filter by payee ID. UUID format."),
     month: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional()
-      .describe("Filter by budget month (ISO format YYYY-MM-DD)"),
+      .describe("Filter by budget month as first day of month (YYYY-MM-DD). Example: '2025-01-01' for January 2025."),
     sinceDate: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional()
       .describe(
-        "Only return transactions on or after this date (ISO format YYYY-MM-DD). Recommended to prevent large payloads.",
+        "Only return transactions on or after this date in ISO format (YYYY-MM-DD). Example: '2025-01-15'. Recommended to prevent large payloads.",
       ),
     sinceDaysAgo: z
       .number()
@@ -60,12 +60,12 @@ export function registerGetTransactionsTool(server: McpServer): void {
       .enum(["week", "month", "quarter", "year"])
       .optional()
       .describe(
-        "Only return transactions from a relative time period (convenience parameter, alternative to sinceDate). Options: week (7 days), month (30 days), quarter (90 days), year (365 days).",
+        "Only return transactions from a relative time period (convenience parameter, alternative to sinceDate). Valid values: 'week' (7 days), 'month' (30 days), 'quarter' (90 days), 'year' (365 days).",
       ),
     type: z
       .enum(["uncategorized", "unapproved"])
       .optional()
-      .describe("Filter by transaction type (helps reduce payload size)"),
+      .describe("Filter by transaction type. Valid values: 'uncategorized', 'unapproved'. Helps reduce payload size."),
     lastKnowledgeOfServer: z
       .number()
       .int()
@@ -260,27 +260,27 @@ export function registerGetTransactionsTool(server: McpServer): void {
 export function registerCreateTransactionTool(server: McpServer): void {
   const transactionSchemaBase = z
     .object({
-      account_id: z.string().optional().describe("Account ID (use ynab.getAccounts to discover)"),
-      account_name: z.string().optional().describe("Account name (alternative to account_id)"),
+      account_id: z.string().optional().describe("Account ID. UUID format. Takes priority over account_name."),
+      account_name: z.string().optional().describe("Account name. Used only if account_id not provided. Resolves to existing account or throws error."),
       date: z
         .string()
         .default(() => new Date().toISOString().split("T")[0])
-        .describe("Transaction date (ISO format YYYY-MM-DD). Defaults to today."),
-      amount: z.number().int().describe("Transaction amount in milliunits"),
-      payee_id: z.string().optional().describe("Payee ID (use ynab.getPayees to discover)"),
-      payee_name: z.string().optional().describe("Payee name (resolves to existing payee or creates new)"),
-      category_id: z.string().optional().describe("Category ID (use ynab.getCategories to discover)"),
-      category_name: z.string().optional().describe("Category name (alternative to category_id)"),
+        .describe("Transaction date in ISO format (YYYY-MM-DD). Example: '2025-01-15'. Defaults to today."),
+      amount: z.number().int().describe("Transaction amount in milliunits (1000 milliunits = $1.00). Negative for expenses, positive for income. Example: -50000 for -$50.00"),
+      payee_id: z.string().optional().describe("Payee ID. UUID format. Takes priority over payee_name."),
+      payee_name: z.string().optional().describe("Payee name. Used only if payee_id not provided. Resolves to existing payee or creates new."),
+      category_id: z.string().optional().describe("Category ID. UUID format. Takes priority over category_name."),
+      category_name: z.string().optional().describe("Category name. Used only if category_id not provided. Resolves to existing category or throws error."),
       memo: z.string().optional().describe("Transaction memo"),
       cleared: z
         .enum(["cleared", "uncleared", "reconciled"])
         .default("uncleared")
-        .describe("Cleared status. Defaults to 'uncleared'."),
+        .describe("Cleared status. Valid values: 'cleared', 'uncleared', 'reconciled'. Defaults to 'uncleared'."),
       approved: z.boolean().default(false).describe("Approved status. Defaults to false."),
       flag_color: z
         .enum(["red", "orange", "yellow", "green", "blue", "purple", ""])
         .optional()
-        .describe("Flag color"),
+        .describe("Flag color. Valid values: 'red', 'orange', 'yellow', 'green', 'blue', 'purple', '' (empty string for no flag)."),
       import_id: z.string().optional().describe("Import ID for deduplication"),
     })
     .passthrough();
@@ -412,33 +412,33 @@ export function registerUpdateTransactionsTool(server: McpServer): void {
       .array(
         z
           .object({
-            id: z.string().optional().describe("Transaction ID"),
-            import_id: z.string().optional().describe("Import ID"),
-            account_id: z.string().optional().describe("Account ID"),
-            account_name: z.string().optional().describe("Account name (alternative to account_id)"),
+            id: z.string().optional().describe("Transaction ID. UUID format."),
+            import_id: z.string().optional().describe("Import ID for deduplication."),
+            account_id: z.string().optional().describe("Account ID. UUID format. Takes priority over account_name."),
+            account_name: z.string().optional().describe("Account name. Used only if account_id not provided. Resolves to existing account or throws error."),
             date: z
               .string()
               .optional()
-              .describe("Transaction date (ISO format)"),
+              .describe("Transaction date in ISO format (YYYY-MM-DD). Example: '2025-01-15'."),
             amount: z
               .number()
               .int()
               .optional()
-              .describe("Transaction amount in milliunits"),
-            payee_id: z.string().optional().describe("Payee ID"),
-            payee_name: z.string().optional().describe("Payee name (resolves to existing payee or creates new)"),
-            category_id: z.string().optional().describe("Category ID"),
-            category_name: z.string().optional().describe("Category name (alternative to category_id)"),
+              .describe("Transaction amount in milliunits (1000 milliunits = $1.00). Negative for expenses, positive for income. Example: -50000 for -$50.00"),
+            payee_id: z.string().optional().describe("Payee ID. UUID format. Takes priority over payee_name."),
+            payee_name: z.string().optional().describe("Payee name. Used only if payee_id not provided. Resolves to existing payee or creates new."),
+            category_id: z.string().optional().describe("Category ID. UUID format. Takes priority over category_name."),
+            category_name: z.string().optional().describe("Category name. Used only if category_id not provided. Resolves to existing category or throws error."),
             memo: z.string().optional().describe("Transaction memo"),
             cleared: z
               .enum(["cleared", "uncleared", "reconciled"])
               .optional()
-              .describe("Cleared status"),
+              .describe("Cleared status. Valid values: 'cleared', 'uncleared', 'reconciled'."),
             approved: z.boolean().optional().describe("Approved status"),
             flag_color: z
               .enum(["red", "orange", "yellow", "green", "blue", "purple", ""])
               .optional()
-              .describe("Flag color"),
+              .describe("Flag color. Valid values: 'red', 'orange', 'yellow', 'green', 'blue', 'purple', '' (empty string for no flag)."),
           })
           .passthrough()
           .refine((data) => !(data.account_id && data.account_name), {
@@ -591,7 +591,7 @@ export function registerImportTransactionsTool(server: McpServer): void {
 
 export function registerDeleteTransactionTool(server: McpServer): void {
   const schema = z.object({
-    transactionId: z.string().min(1).describe("The ID of the transaction (use ynab.getTransactions to discover)"),
+    transactionId: z.string().min(1).describe("Transaction ID. UUID format."),
     includeMilliunits: z
       .boolean()
       .optional()

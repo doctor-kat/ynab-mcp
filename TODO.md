@@ -32,12 +32,14 @@ Implement all 32 identified improvements to optimize token usage, improve LLM co
 
 ## Phase 2: Tool Descriptions & Parameters
 
-### 2.1 Parameter Description Cleanup
+### 2.1 Parameter Description Cleanup ✅
 
-- [ ] Remove all "use X to discover" patterns from ~20+ parameter descriptions
-- [ ] Add explicit enum value documentation inline
-- [ ] Add examples to complex parameters (amounts, dates, splits)
-- [ ] Clarify mutually exclusive parameter priorities
+- [x] Remove all "use X to discover" patterns from ~20+ parameter descriptions
+- [x] Add explicit enum value documentation inline
+- [x] Add examples to complex parameters (amounts, dates, splits)
+- [x] Clarify mutually exclusive parameter priorities
+
+**Completed:** Updated 8 files with 186 lines changed. Removed 23 "use ynab.X to discover" patterns, added explicit UUID format documentation to 36 ID parameters, enhanced 11 enum parameters with inline valid values, added examples to complex parameters (amounts, dates, subtransactions), and clarified priority for mutually exclusive parameters (id vs name).
 
 ### 2.2 Tool Renaming for Consistency
 

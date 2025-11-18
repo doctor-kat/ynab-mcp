@@ -80,16 +80,16 @@ export function registerCreateScheduledTransactionTool(
   const schema = z.object({
     scheduledTransaction: z
       .object({
-        account_id: z.string().optional().describe("Account ID (use ynab.getAccounts to discover)"),
-        account_name: z.string().optional().describe("Account name (alternative to account_id)"),
+        account_id: z.string().optional().describe("Account ID. UUID format. Takes priority over account_name."),
+        account_name: z.string().optional().describe("Account name. Used only if account_id not provided. Resolves to existing account or throws error."),
         date_first: z
           .string()
           .default(() => new Date().toISOString().split("T")[0])
-          .describe("First occurrence date (ISO format YYYY-MM-DD). Defaults to today."),
+          .describe("First occurrence date in ISO format (YYYY-MM-DD). Example: '2025-01-15'. Defaults to today."),
         date_next: z
           .string()
           .default(() => new Date().toISOString().split("T")[0])
-          .describe("Next occurrence date (ISO format YYYY-MM-DD). Defaults to today."),
+          .describe("Next occurrence date in ISO format (YYYY-MM-DD). Example: '2025-02-15'. Defaults to today."),
         frequency: z
           .enum([
             "never",
@@ -106,17 +106,17 @@ export function registerCreateScheduledTransactionTool(
             "yearly",
             "everyOtherYear",
           ])
-          .describe("Frequency of scheduled transaction"),
-        amount: z.number().int().describe("Transaction amount in milliunits"),
-        payee_id: z.string().optional().describe("Payee ID (use ynab.getPayees to discover)"),
-        payee_name: z.string().optional().describe("Payee name (resolves to existing payee or creates new)"),
-        category_id: z.string().optional().describe("Category ID (use ynab.getCategories to discover)"),
-        category_name: z.string().optional().describe("Category name (alternative to category_id)"),
+          .describe("Frequency of scheduled transaction. Valid values: 'never', 'daily', 'weekly', 'everyOtherWeek', 'twiceAMonth', 'every4Weeks', 'monthly', 'everyOtherMonth', 'every3Months', 'every4Months', 'twiceAYear', 'yearly', 'everyOtherYear'."),
+        amount: z.number().int().describe("Transaction amount in milliunits (1000 milliunits = $1.00). Negative for expenses, positive for income. Example: -50000 for -$50.00"),
+        payee_id: z.string().optional().describe("Payee ID. UUID format. Takes priority over payee_name."),
+        payee_name: z.string().optional().describe("Payee name. Used only if payee_id not provided. Resolves to existing payee or creates new."),
+        category_id: z.string().optional().describe("Category ID. UUID format. Takes priority over category_name."),
+        category_name: z.string().optional().describe("Category name. Used only if category_id not provided. Resolves to existing category or throws error."),
         memo: z.string().optional().describe("Transaction memo"),
         flag_color: z
           .enum(["red", "orange", "yellow", "green", "blue", "purple", ""])
           .optional()
-          .describe("Flag color"),
+          .describe("Flag color. Valid values: 'red', 'orange', 'yellow', 'green', 'blue', 'purple', '' (empty string for no flag)."),
       })
       .passthrough()
       .refine((data) => data.account_id || data.account_name, {
@@ -222,19 +222,19 @@ export function registerUpdateScheduledTransactionTool(
     scheduledTransactionId: z
       .string()
       .min(1)
-      .describe("The ID of the scheduled transaction (use ynab.getScheduledTransactions to discover)"),
+      .describe("Scheduled transaction ID. UUID format."),
     scheduledTransaction: z
       .object({
-        account_id: z.string().optional().describe("Account ID"),
-        account_name: z.string().optional().describe("Account name (alternative to account_id)"),
+        account_id: z.string().optional().describe("Account ID. UUID format. Takes priority over account_name."),
+        account_name: z.string().optional().describe("Account name. Used only if account_id not provided. Resolves to existing account or throws error."),
         date_first: z
           .string()
           .optional()
-          .describe("First occurrence date (ISO format)"),
+          .describe("First occurrence date in ISO format (YYYY-MM-DD). Example: '2025-01-15'."),
         date_next: z
           .string()
           .optional()
-          .describe("Next occurrence date (ISO format)"),
+          .describe("Next occurrence date in ISO format (YYYY-MM-DD). Example: '2025-02-15'."),
         frequency: z
           .enum([
             "never",
@@ -252,21 +252,21 @@ export function registerUpdateScheduledTransactionTool(
             "everyOtherYear",
           ])
           .optional()
-          .describe("Frequency of scheduled transaction"),
+          .describe("Frequency of scheduled transaction. Valid values: 'never', 'daily', 'weekly', 'everyOtherWeek', 'twiceAMonth', 'every4Weeks', 'monthly', 'everyOtherMonth', 'every3Months', 'every4Months', 'twiceAYear', 'yearly', 'everyOtherYear'."),
         amount: z
           .number()
           .int()
           .optional()
-          .describe("Transaction amount in milliunits"),
-        payee_id: z.string().optional().describe("Payee ID"),
-        payee_name: z.string().optional().describe("Payee name (resolves to existing payee or creates new)"),
-        category_id: z.string().optional().describe("Category ID"),
-        category_name: z.string().optional().describe("Category name (alternative to category_id)"),
+          .describe("Transaction amount in milliunits (1000 milliunits = $1.00). Negative for expenses, positive for income. Example: -50000 for -$50.00"),
+        payee_id: z.string().optional().describe("Payee ID. UUID format. Takes priority over payee_name."),
+        payee_name: z.string().optional().describe("Payee name. Used only if payee_id not provided. Resolves to existing payee or creates new."),
+        category_id: z.string().optional().describe("Category ID. UUID format. Takes priority over category_name."),
+        category_name: z.string().optional().describe("Category name. Used only if category_id not provided. Resolves to existing category or throws error."),
         memo: z.string().optional().describe("Transaction memo"),
         flag_color: z
           .enum(["red", "orange", "yellow", "green", "blue", "purple", ""])
           .optional()
-          .describe("Flag color"),
+          .describe("Flag color. Valid values: 'red', 'orange', 'yellow', 'green', 'blue', 'purple', '' (empty string for no flag)."),
       })
       .passthrough()
       .refine((data) => !(data.account_id && data.account_name), {
@@ -365,7 +365,7 @@ export function registerDeleteScheduledTransactionTool(
     scheduledTransactionId: z
       .string()
       .min(1)
-      .describe("The ID of the scheduled transaction (use ynab.getScheduledTransactions to discover)"),
+      .describe("Scheduled transaction ID. UUID format."),
     includeMilliunits: z
       .boolean()
       .optional()
