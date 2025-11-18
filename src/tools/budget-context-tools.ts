@@ -13,9 +13,9 @@ export function registerGetBudgetContextTool(server: McpServer): void {
   const schema = z.object({});
 
   server.registerTool(
-    "ynab.getBudgetContext",
+    "ynab.getAvailableBudgets",
     {
-      title: "Get budget context",
+      title: "Get available budgets",
       description:
         "Get all available budgets and the currently active budget. " +
         "Use this to discover budgetId values. " +
@@ -44,7 +44,7 @@ export function registerSetActiveBudgetTool(server: McpServer): void {
       .string()
       .min(1)
       .describe(
-        "Budget ID to set as active. UUID format. Must be one of the budgets from ynab.getBudgetContext.",
+        "Budget ID to set as active. UUID format. Must be one of the budgets from ynab.getAvailableBudgets.",
       ),
   });
 
@@ -54,7 +54,7 @@ export function registerSetActiveBudgetTool(server: McpServer): void {
       title: "Set active budget",
       description:
         "Switch the active budget. " +
-        "The budgetId must be one of the budgets from getBudgetContext.",
+        "The budgetId must be one of the budgets from getAvailableBudgets.",
       inputSchema: schema.shape,
     },
     async (args) => {

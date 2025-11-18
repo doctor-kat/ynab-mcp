@@ -41,15 +41,17 @@ Implement all 32 identified improvements to optimize token usage, improve LLM co
 
 **Completed:** Updated 8 files with 186 lines changed. Removed 23 "use ynab.X to discover" patterns, added explicit UUID format documentation to 36 ID parameters, enhanced 11 enum parameters with inline valid values, added examples to complex parameters (amounts, dates, subtransactions), and clarified priority for mutually exclusive parameters (id vs name).
 
-### 2.2 Tool Renaming for Consistency
+### 2.2 Tool Renaming for Consistency ✅
 
-- [ ] Breaking: Rename staging tools:
-  - [ ] reviewChanges → getStagedChanges
-  - [ ] applyChanges → applyStagedChanges
-  - [ ] clearChanges → clearStagedChanges
-- [ ] Breaking: Rename budget tools:
-  - [ ] getBudgets → getBudgetDetails
-  - [ ] getBudgetContext → getAvailableBudgets
+- [x] Breaking: Rename staging tools:
+  - [x] reviewChanges → getStagedChanges
+  - [x] applyChanges → applyStagedChanges
+  - [x] clearChanges → clearStagedChanges
+- [x] Breaking: Rename budget tools:
+  - [x] getBudgets → getBudgetDetails
+  - [x] getBudgetContext → getAvailableBudgets
+
+**Completed:** Renamed 5 tools (3 staging, 2 budget) for consistency. Updated 7 files including src code, tests, and documentation (CLAUDE.md, README.md). All cross-references in error messages, tool descriptions, and parameter descriptions updated. Function names unchanged, only MCP tool registration names modified.
 
 ### 2.3 Add Missing Documentation
 

@@ -107,7 +107,7 @@ The server registers 41 tools across all YNAB API endpoints and change managemen
 - **5 staging tools** (stage categorization, stage split, review staged changes, apply changes, clear staged changes)
 - **5 cache management tools** (refresh payee cache, refresh category cache, refresh account cache, refresh settings cache, clear all caches)
 
-All tools follow the naming pattern `ynab.{operationName}` (e.g., `ynab.getTransactions`, `ynab.updateTransaction`, `ynab.getBudgetContext`)
+All tools follow the naming pattern `ynab.{operationName}` (e.g., `ynab.getTransactions`, `ynab.updateTransaction`, `ynab.getAvailableBudgets`)
 
 ### Transaction Staging:
 
@@ -115,9 +115,9 @@ The server implements a **stage-review-apply workflow** for transaction modifica
 
 #### Workflow:
 1. **Stage**: Propose changes without applying them (`ynab.stageCategorization`, `ynab.stageSplit`)
-2. **Review**: Inspect proposed changes before committing (`ynab.reviewChanges`)
-3. **Apply**: Commit staged changes to YNAB API (`ynab.applyChanges`)
-4. **Clear**: Discard unwanted staged changes (`ynab.clearChanges`)
+2. **Review**: Inspect proposed changes before committing (`ynab.getStagedChanges`)
+3. **Apply**: Commit staged changes to YNAB API (`ynab.applyStagedChanges`)
+4. **Clear**: Discard unwanted staged changes (`ynab.clearStagedChanges`)
 
 #### Available Tools:
 
@@ -131,18 +131,18 @@ The server implements a **stage-review-apply workflow** for transaction modifica
 - Validates that subtransactions sum to the total transaction amount
 - Does not apply to YNAB until approved
 
-**`ynab.reviewChanges`**
+**`ynab.getStagedChanges`**
 - Lists all staged changes awaiting approval
 - Shows original state vs. proposed changes
 - Optional filtering by transaction ID
 
-**`ynab.applyChanges`**
+**`ynab.applyStagedChanges`**
 - Commits staged changes to YNAB API
 - Can apply all staged changes or specific change IDs
 - Returns success/failure status for each change
 - Removes successfully applied changes from staging
 
-**`ynab.clearChanges`**
+**`ynab.clearStagedChanges`**
 - Discards staged changes without applying them
 - Can clear all or specific change IDs
 - Use this to remove incorrectly staged changes
@@ -164,15 +164,15 @@ const staged = await ynab.stageCategorization({
 });
 
 // 2. Review what will be changed
-const review = await ynab.reviewChanges();
+const review = await ynab.getStagedChanges();
 // Shows: 1 staged change with before/after comparison
 
 // 3. Apply the change
-const result = await ynab.applyChanges();
+const result = await ynab.applyStagedChanges();
 // Commits to YNAB API and removes from staging
 
 // Alternative: Clear if you made a mistake
-const cleared = await ynab.clearChanges();
+const cleared = await ynab.clearStagedChanges();
 // Discards all staged changes without applying
 ```
 
@@ -198,7 +198,7 @@ The server implements a **budget context cache** to minimize API calls and impro
 
 #### Available Tools:
 
-**`ynab.getBudgetContext`**
+**`ynab.getAvailableBudgets`**
 - Returns cached budget information (ZERO API calls)
 - Shows all available budgets with metadata
 - Displays currently active budget ID and name
@@ -209,7 +209,7 @@ The server implements a **budget context cache** to minimize API calls and impro
 - Switches the active budget (ZERO API calls)
 - Validates budgetId against cached budgets
 - Required only for multi-budget users who want to switch between budgets
-- Takes a budgetId parameter (use `ynab.getBudgetContext` to see available budgets)
+- Takes a budgetId parameter (use `ynab.getAvailableBudgets` to see available budgets)
 
 **`ynab.refreshBudgetContext`**
 - Refreshes the cache by calling the YNAB API (ONE API call)
@@ -593,7 +593,7 @@ await ynab.stageSplit({
 });
 
 // 3. Review shows both formats
-const review = await ynab.reviewChanges();
+const review = await ynab.getStagedChanges();
 // {
 //   changes: [{
 //     proposedChanges: {
@@ -626,9 +626,9 @@ const review = await ynab.reviewChanges();
 - Accounts: `getAccounts`, `createAccount`
 - Categories: `getCategories`, `getCategoryGroups`, `getCategoriesByGroup`, `getCategory`, `updateCategory`, `getMonthCategory`, `updateMonthCategory`
 - Months: `getMonths`, `getMonthDetail`
-- Budgets: `getBudgets`, `getBudgetById`
+- Budgets: `getBudgetDetails`, `getBudgetById`
 - Scheduled transactions: All scheduled transaction tools
-- Staging: `reviewChanges` (shows formatted amounts in staged changes)
+- Staging: `getStagedChanges` (shows formatted amounts in staged changes)
 
 **Testing:** Comprehensive tests in `tests/utils/`:
 - `currency-formatter.test.ts` - Tests USD, EUR, JPY formatting with edge cases

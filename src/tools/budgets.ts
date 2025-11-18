@@ -24,11 +24,11 @@ export function registerGetBudgetsTool(server: McpServer): void {
   });
 
   server.registerTool(
-    "ynab.getBudgets",
+    "ynab.getBudgetDetails",
     {
-      title: "Get budgets",
+      title: "Get budget details",
       description:
-        "Get all budgets with summaries. Can optionally include account details. NOTE: For discovering budgetId values, use getBudgetContext instead.",
+        "Get all budgets with summaries. Can optionally include account details. NOTE: For discovering budgetId values, use getAvailableBudgets instead.",
       inputSchema: schema.shape,
     },
     async (args) => {

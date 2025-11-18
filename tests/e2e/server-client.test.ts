@@ -90,7 +90,7 @@ describe.skip("E2E - MCP Client/Server Communication", () => {
 
       // Verify a few expected tools
       const toolNames = tools.tools.map((t) => t.name);
-      expect(toolNames).toContain("ynab.getBudgets");
+      expect(toolNames).toContain("ynab.getBudgetDetails");
       expect(toolNames).toContain("ynab.getTransactions");
       expect(toolNames).toContain("ynab.updateTransaction");
     });
@@ -127,7 +127,7 @@ describe.skip("E2E - MCP Client/Server Communication", () => {
 
       // Step 1: List budgets
       const budgetsResult = await client.callTool({
-        name: "ynab.getBudgets",
+        name: "ynab.getBudgetDetails",
         arguments: {},
       });
 

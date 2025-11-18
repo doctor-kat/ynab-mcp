@@ -132,7 +132,7 @@ describe("E2E Tests", () => {
 
     await client.connect(transport);
     const result = await client.callTool({
-      name: "ynab.getBudgets",
+      name: "ynab.getBudgetDetails",
       arguments: {}
     });
 

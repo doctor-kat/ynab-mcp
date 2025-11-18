@@ -72,7 +72,7 @@ export function getErrorHint(context: ErrorContext): string {
 
   // Handle budget context errors
   if (message.includes("No active budget") || message.includes("No budgets found")) {
-    return "Budget context error. Use ynab.getBudgetContext to see available budgets, then ynab.setActiveBudget to select one.";
+    return "Budget context error. Use ynab.getAvailableBudgets to see available budgets, then ynab.setActiveBudget to select one.";
   }
 
   // Generic hint
@@ -137,7 +137,7 @@ function getNotFoundHint(context: ErrorContext): string {
     category: "Category not found. It may have been deleted or the ID/name is incorrect. Use ynab.getCategories to find valid categories.",
     account: "Account not found. It may have been closed or the ID/name is incorrect. Use ynab.getAccounts to find valid accounts.",
     payee: "Payee not found. It may have been deleted or the ID is incorrect. Use ynab.getPayees to find valid payees.",
-    budget: "Budget not found. Use ynab.getBudgetContext to see available budgets.",
+    budget: "Budget not found. Use ynab.getAvailableBudgets to see available budgets.",
     month: "Month not found. Ensure the month exists in the budget and use YYYY-MM-DD format for the first day of the month.",
   };
 

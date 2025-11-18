@@ -51,7 +51,7 @@ export function registerStageCategorizationTool(server: McpServer): void {
     {
       title: "Stage transaction categorization",
       description:
-        "Stage a category change for review before applying. Use reviewChanges to inspect and applyChanges to commit.",
+        "Stage a category change for review before applying. Use getStagedChanges to inspect and applyStagedChanges to commit.",
       inputSchema: schemaBase.shape,
     },
     async (args: SchemaType) => {
@@ -189,7 +189,7 @@ export function registerStageSplitTool(server: McpServer): void {
     {
       title: "Stage transaction split",
       description:
-        "Stage a transaction split for review before applying. Subtransactions must sum to transaction total. Use reviewChanges to inspect and applyChanges to commit.",
+        "Stage a transaction split for review before applying. Subtransactions must sum to transaction total. Use getStagedChanges to inspect and applyStagedChanges to commit.",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -355,7 +355,7 @@ export function registerBulkCategorizeTool(server: McpServer): void {
     {
       title: "Bulk categorize transactions",
       description:
-        "Stage category changes for multiple transactions at once. More efficient than staging individually. Use reviewChanges to inspect and applyChanges to commit.",
+        "Stage category changes for multiple transactions at once. More efficient than staging individually. Use getStagedChanges to inspect and applyStagedChanges to commit.",
       inputSchema: schemaBase.shape,
     },
     async (args: SchemaType) => {
@@ -471,10 +471,10 @@ export function registerReviewChangesTool(server: McpServer): void {
   });
 
   server.registerTool(
-    "ynab.reviewChanges",
+    "ynab.getStagedChanges",
     {
-      title: "Review staged changes",
-      description: "List all staged changes awaiting approval. Shows what will happen when applyChanges is called.",
+      title: "Get staged changes",
+      description: "List all staged changes awaiting approval. Shows what will happen when applyStagedChanges is called.",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -525,7 +525,7 @@ export function registerReviewChangesTool(server: McpServer): void {
         );
 
         return successResult(
-          `📋 ${changes.length} staged change(s):\n\n${summary}\n\nUse ynab.applyChanges to commit these changes to YNAB.`,
+          `📋 ${changes.length} staged change(s):\n\n${summary}\n\nUse ynab.applyStagedChanges to commit these changes to YNAB.`,
           formattedData,
         );
       } catch (error) {
@@ -549,7 +549,7 @@ export function registerApplyChangesTool(server: McpServer): void {
   });
 
   server.registerTool(
-    "ynab.applyChanges",
+    "ynab.applyStagedChanges",
     {
       title: "Apply staged changes",
       description: "Commit staged changes to YNAB. Makes changes permanent.",
@@ -680,7 +680,7 @@ export function registerClearChangesTool(server: McpServer): void {
   });
 
   server.registerTool(
-    "ynab.clearChanges",
+    "ynab.clearStagedChanges",
     {
       title: "Clear staged changes",
       description: "Discard staged changes without applying them.",
