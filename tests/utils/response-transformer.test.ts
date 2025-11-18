@@ -15,7 +15,7 @@ describe("Response Transformer", () => {
   };
 
   describe("simple object transformation", () => {
-    it("should add formatted amount field", () => {
+    it("should add only formatted field by default (formatted-only)", () => {
       const input = {
         amount: -50000,
         memo: "Test transaction",
@@ -24,13 +24,28 @@ describe("Response Transformer", () => {
       const result = addFormattedAmounts(input, usdFormat);
 
       expect(result).toEqual({
+        amount_formatted: "-$50.00",
+        memo: "Test transaction",
+      });
+      expect(result.amount).toBeUndefined();
+    });
+
+    it("should add formatted amount field (with milliunits)", () => {
+      const input = {
+        amount: -50000,
+        memo: "Test transaction",
+      };
+
+      const result = addFormattedAmounts(input, usdFormat, true);
+
+      expect(result).toEqual({
         amount: -50000,
         amount_formatted: "-$50.00",
         memo: "Test transaction",
       });
     });
 
-    it("should add formatted balance fields", () => {
+    it("should add only formatted balance fields by default (formatted-only)", () => {
       const input = {
         balance: 1000000,
         cleared_balance: 950000,
@@ -38,6 +53,25 @@ describe("Response Transformer", () => {
       };
 
       const result = addFormattedAmounts(input, usdFormat);
+
+      expect(result).toEqual({
+        balance_formatted: "$1,000.00",
+        cleared_balance_formatted: "$950.00",
+        uncleared_balance_formatted: "$50.00",
+      });
+      expect(result.balance).toBeUndefined();
+      expect(result.cleared_balance).toBeUndefined();
+      expect(result.uncleared_balance).toBeUndefined();
+    });
+
+    it("should add formatted balance fields (with milliunits)", () => {
+      const input = {
+        balance: 1000000,
+        cleared_balance: 950000,
+        uncleared_balance: 50000,
+      };
+
+      const result = addFormattedAmounts(input, usdFormat, true);
 
       expect(result).toEqual({
         balance: 1000000,
@@ -49,13 +83,29 @@ describe("Response Transformer", () => {
       });
     });
 
-    it("should add formatted budget-related fields", () => {
+    it("should add only formatted budget fields by default (formatted-only)", () => {
       const input = {
         budgeted: 500000,
         activity: -350000,
       };
 
       const result = addFormattedAmounts(input, usdFormat);
+
+      expect(result).toEqual({
+        budgeted_formatted: "$500.00",
+        activity_formatted: "-$350.00",
+      });
+      expect(result.budgeted).toBeUndefined();
+      expect(result.activity).toBeUndefined();
+    });
+
+    it("should add formatted budget-related fields (with milliunits)", () => {
+      const input = {
+        budgeted: 500000,
+        activity: -350000,
+      };
+
+      const result = addFormattedAmounts(input, usdFormat, true);
 
       expect(result).toEqual({
         budgeted: 500000,
@@ -67,7 +117,7 @@ describe("Response Transformer", () => {
   });
 
   describe("nested object transformation", () => {
-    it("should transform nested transaction with subtransactions", () => {
+    it("should transform nested transaction with subtransactions (formatted-only)", () => {
       const input = {
         amount: -100000,
         subtransactions: [
@@ -85,6 +135,43 @@ describe("Response Transformer", () => {
       };
 
       const result = addFormattedAmounts(input, usdFormat);
+
+      expect(result).toEqual({
+        amount_formatted: "-$100.00",
+        subtransactions: [
+          {
+            amount_formatted: "-$50.00",
+            category_id: "cat-1",
+            memo: "Split 1",
+          },
+          {
+            amount_formatted: "-$50.00",
+            category_id: "cat-2",
+            memo: "Split 2",
+          },
+        ],
+      });
+      expect(result.amount).toBeUndefined();
+    });
+
+    it("should transform nested transaction with subtransactions (with milliunits)", () => {
+      const input = {
+        amount: -100000,
+        subtransactions: [
+          {
+            amount: -50000,
+            category_id: "cat-1",
+            memo: "Split 1",
+          },
+          {
+            amount: -50000,
+            category_id: "cat-2",
+            memo: "Split 2",
+          },
+        ],
+      };
+
+      const result = addFormattedAmounts(input, usdFormat, true);
 
       expect(result).toEqual({
         amount: -100000,
@@ -106,7 +193,7 @@ describe("Response Transformer", () => {
       });
     });
 
-    it("should transform deeply nested structures", () => {
+    it("should transform deeply nested structures (formatted-only)", () => {
       const input = {
         data: {
           transactions: [
@@ -128,6 +215,40 @@ describe("Response Transformer", () => {
         data: {
           transactions: [
             {
+              amount_formatted: "-$50.00",
+              category_id: "cat-1",
+            },
+            {
+              amount_formatted: "-$25.00",
+              category_id: "cat-2",
+            },
+          ],
+        },
+      });
+    });
+
+    it("should transform deeply nested structures (with milliunits)", () => {
+      const input = {
+        data: {
+          transactions: [
+            {
+              amount: -50000,
+              category_id: "cat-1",
+            },
+            {
+              amount: -25000,
+              category_id: "cat-2",
+            },
+          ],
+        },
+      };
+
+      const result = addFormattedAmounts(input, usdFormat, true);
+
+      expect(result).toEqual({
+        data: {
+          transactions: [
+            {
               amount: -50000,
               amount_formatted: "-$50.00",
               category_id: "cat-1",
@@ -144,13 +265,33 @@ describe("Response Transformer", () => {
   });
 
   describe("array transformation", () => {
-    it("should transform array of transactions", () => {
+    it("should transform array of transactions (formatted-only)", () => {
       const input = [
         { amount: -50000, memo: "Transaction 1" },
         { amount: -25000, memo: "Transaction 2" },
       ];
 
       const result = addFormattedAmounts(input, usdFormat);
+
+      expect(result).toEqual([
+        {
+          amount_formatted: "-$50.00",
+          memo: "Transaction 1",
+        },
+        {
+          amount_formatted: "-$25.00",
+          memo: "Transaction 2",
+        },
+      ]);
+    });
+
+    it("should transform array of transactions (with milliunits)", () => {
+      const input = [
+        { amount: -50000, memo: "Transaction 1" },
+        { amount: -25000, memo: "Transaction 2" },
+      ];
+
+      const result = addFormattedAmounts(input, usdFormat, true);
 
       expect(result).toEqual([
         {
@@ -260,7 +401,7 @@ describe("Response Transformer", () => {
   });
 
   describe("mixed data structures", () => {
-    it("should preserve non-amount fields unchanged", () => {
+    it("should preserve non-amount fields unchanged (formatted-only)", () => {
       const input = {
         id: "txn-123",
         date: "2025-01-15",
@@ -274,6 +415,33 @@ describe("Response Transformer", () => {
       };
 
       const result = addFormattedAmounts(input, usdFormat);
+
+      expect(result.id).toBe("txn-123");
+      expect(result.date).toBe("2025-01-15");
+      expect(result.amount).toBeUndefined();
+      expect(result.amount_formatted).toBe("-$50.00");
+      expect(result.approved).toBe(true);
+      expect(result.cleared).toBe("cleared");
+      expect(result.tags).toEqual(["groceries", "food"]);
+      expect(result.metadata).toEqual({
+        created_at: "2025-01-15T10:00:00Z",
+      });
+    });
+
+    it("should preserve non-amount fields unchanged (with milliunits)", () => {
+      const input = {
+        id: "txn-123",
+        date: "2025-01-15",
+        amount: -50000,
+        approved: true,
+        cleared: "cleared",
+        tags: ["groceries", "food"],
+        metadata: {
+          created_at: "2025-01-15T10:00:00Z",
+        },
+      };
+
+      const result = addFormattedAmounts(input, usdFormat, true);
 
       expect(result.id).toBe("txn-123");
       expect(result.date).toBe("2025-01-15");

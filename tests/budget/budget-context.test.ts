@@ -73,7 +73,7 @@ describe("BudgetContext", () => {
       expect(context.activeBudgetName).toBe("Test Budget");
     });
 
-    it("should NOT auto-set active budget when user has multiple budgets", async () => {
+    it("should auto-set first budget when user has multiple budgets", async () => {
       const multipleBudgets = {
         data: {
           budgets: [
@@ -107,7 +107,9 @@ describe("BudgetContext", () => {
 
       const context = budgetStore.getState().getBudgetContext();
       expect(context.budgets.length).toBe(2);
-      expect(context.activeBudgetId).toBeNull();
+      // First budget should be auto-set as active
+      expect(context.activeBudgetId).toBe("budget-1");
+      expect(context.activeBudgetName).toBe("Personal Budget");
     });
 
     it("should handle API errors gracefully", async () => {
