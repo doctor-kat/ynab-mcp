@@ -22,11 +22,13 @@ Implement all 32 identified improvements to optimize token usage, improve LLM co
 
 **Completed:** Created comprehensive error hint system with context-aware messages for all HTTP status codes (400, 401, 403, 404, 409, 429, 500+). Enhanced errorResult() to automatically include hints and next steps. Added formatted amount validation errors for split transactions showing exact difference in currency format.
 
-### 1.3 Response Metadata System
+### 1.3 Response Metadata System ✅
 
-- [ ] Add metadata field to all list responses with: count, filters, endpoint, cached
-- [ ] Flatten category responses from {data: {category_groups: [...]}} to {category_groups: [...], metadata: {...}}
-- [ ] Breaking: Remove excessive nesting throughout
+- [x] Add metadata field to all list responses with: count, filters, endpoint, cached
+- [x] Flatten category responses from {data: {category_groups: [...]}} to {category_groups: [...], metadata: {...}}
+- [x] Breaking: Remove excessive nesting throughout
+
+**Completed:** Added ResponseMetadata interface and buildMetadata() helper in utils.ts. Flattened 12 list-returning tools across 7 files (categories, transactions, accounts, payees, months, scheduled-transactions, budgets). All responses now include metadata with count, active filters, and cache status. Category responses BREAKING CHANGE: no longer nested under data.category_groups.
 
 ## Phase 2: Tool Descriptions & Parameters
 

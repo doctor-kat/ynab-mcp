@@ -6,7 +6,7 @@ import {
   updateMonthCategory,
 } from "../api/index.js";
 import { categoryStore } from "../cache/index.js";
-import { errorResult, isReadOnly, readOnlyResult, successResult, getActiveBudgetIdOrError, getCurrencyFormat } from "./utils.js";
+import { errorResult, isReadOnly, readOnlyResult, successResult, getActiveBudgetIdOrError, getCurrencyFormat, buildMetadata } from "./utils.js";
 import { addFormattedAmounts } from "../utils/response-transformer.js";
 import { resolveCategoryGroupId, resolveCategoryId } from "./resolvers.js";
 import { filterCategoryGroupsWithCategories, filterCategoryGroups, selectCategoryGroupFields } from "../utils/category-filters.js";
@@ -97,16 +97,36 @@ export function registerGetCategoriesTool(server: McpServer): void {
           args.full ?? false,
         );
 
+        // Build metadata
+        const filters: Record<string, any> = {};
+        if (args.includeHidden !== undefined) filters.includeHidden = args.includeHidden;
+        if (args.includeDeleted !== undefined) filters.includeDeleted = args.includeDeleted;
+        if (args.namePattern !== undefined) filters.namePattern = args.namePattern;
+        if (resolvedGroupId) filters.categoryGroupId = resolvedGroupId;
+        if (resolvedCategoryId) filters.categoryId = resolvedCategoryId;
+        if (args.full !== undefined) filters.full = args.full;
+
+        const metadata = buildMetadata({
+          count: filtered_groups.length,
+          filters,
+          cached: true,
+        });
+
+        const flatResponse = {
+          category_groups: filtered_groups,
+          metadata,
+        };
+
         // Add formatted currency amounts
         const currencyFormat = await getCurrencyFormat();
         const formattedResponse = addFormattedAmounts(
-          { data: { category_groups: filtered_groups } },
+          flatResponse,
           currencyFormat,
           args.includeMilliunits ?? false,
         );
 
         return successResult(
-          `Categories for budget ${budgetId}`,
+          `${metadata.count} category group(s) retrieved`,
           formattedResponse,
         );
       } catch (error) {
@@ -225,16 +245,33 @@ export function registerGetMonthCategoryByIdTool(server: McpServer): void {
         const budgetId = getActiveBudgetIdOrError();
         const response = await getMonthCategoryById({ budgetId, ...args });
 
+        // Build metadata
+        const filters: Record<string, any> = {
+          categoryId: args.categoryId,
+          month: args.month,
+        };
+
+        const metadata = buildMetadata({
+          count: 1,
+          filters,
+          cached: false,
+        });
+
+        const flatResponse = {
+          category: response.data.category,
+          metadata,
+        };
+
         // Add formatted currency amounts
         const currencyFormat = await getCurrencyFormat();
         const formattedResponse = addFormattedAmounts(
-          response,
+          flatResponse,
           currencyFormat,
           args.includeMilliunits ?? false,
         );
 
         return successResult(
-          `Category ${args.categoryId} for month ${args.month} in budget ${budgetId}`,
+          `Category ${args.categoryId} for month ${args.month} retrieved`,
           formattedResponse,
         );
       } catch (error) {
@@ -330,9 +367,25 @@ export function registerGetCategoryGroupsTool(server: McpServer): void {
 
         const minimal_groups = filtered_groups.map(selectCategoryGroupFields);
 
+        // Build metadata
+        const filters: Record<string, any> = {};
+        if (args.includeHidden !== undefined) filters.includeHidden = args.includeHidden;
+        if (args.includeDeleted !== undefined) filters.includeDeleted = args.includeDeleted;
+
+        const metadata = buildMetadata({
+          count: minimal_groups.length,
+          filters,
+          cached: true,
+        });
+
+        const flatResponse = {
+          category_groups: minimal_groups,
+          metadata,
+        };
+
         return successResult(
-          `Category groups for budget ${budgetId}`,
-          { data: { category_groups: minimal_groups } },
+          `${metadata.count} category group(s) retrieved`,
+          flatResponse,
         );
       } catch (error) {
         return errorResult(error);
@@ -413,16 +466,36 @@ export function registerGetCategoriesByGroupTool(server: McpServer): void {
         // Extract categories from the single group
         const categories = (filtered_groups[0] as any)?.categories || [];
 
+        // Build metadata
+        const filters: Record<string, any> = {
+          categoryGroupId: resolvedGroupId,
+        };
+        if (args.includeHidden !== undefined) filters.includeHidden = args.includeHidden;
+        if (args.includeDeleted !== undefined) filters.includeDeleted = args.includeDeleted;
+        if (args.namePattern !== undefined) filters.namePattern = args.namePattern;
+        if (args.full !== undefined) filters.full = args.full;
+
+        const metadata = buildMetadata({
+          count: categories.length,
+          filters,
+          cached: true,
+        });
+
+        const flatResponse = {
+          categories,
+          metadata,
+        };
+
         // Add formatted currency amounts if full=true
         const currencyFormat = await getCurrencyFormat();
         const formattedResponse = addFormattedAmounts(
-          { data: { categories } },
+          flatResponse,
           currencyFormat,
           args.includeMilliunits ?? false,
         );
 
         return successResult(
-          `Categories in group ${resolvedGroupId} for budget ${budgetId}`,
+          `${metadata.count} categor${metadata.count === 1 ? 'y' : 'ies'} in group ${resolvedGroupId}`,
           formattedResponse,
         );
       } catch (error) {
@@ -499,16 +572,33 @@ export function registerGetCategoryTool(server: McpServer): void {
 
         const category = (filtered_groups[0] as any)?.categories[0];
 
+        // Build metadata
+        const filters: Record<string, any> = {
+          categoryId: resolvedCategoryId,
+        };
+        if (args.full !== undefined) filters.full = args.full;
+
+        const metadata = buildMetadata({
+          count: 1,
+          filters,
+          cached: true,
+        });
+
+        const flatResponse = {
+          category,
+          metadata,
+        };
+
         // Add formatted currency amounts if full=true
         const currencyFormat = await getCurrencyFormat();
         const formattedResponse = addFormattedAmounts(
-          { data: { category } },
+          flatResponse,
           currencyFormat,
           args.includeMilliunits ?? false,
         );
 
         return successResult(
-          `Category ${resolvedCategoryId} for budget ${budgetId}`,
+          `Category ${resolvedCategoryId} retrieved`,
           formattedResponse,
         );
       } catch (error) {

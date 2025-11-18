@@ -2,7 +2,7 @@ import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { updatePayee } from "../api/index.js";
 import { payeeStore } from "../cache/index.js";
-import { errorResult, isReadOnly, readOnlyResult, successResult, getActiveBudgetIdOrError } from "./utils.js";
+import { errorResult, isReadOnly, readOnlyResult, successResult, getActiveBudgetIdOrError, buildMetadata } from "./utils.js";
 
 export function registerGetPayeesTool(server: McpServer): void {
   const schema = z.object({});
@@ -18,7 +18,19 @@ export function registerGetPayeesTool(server: McpServer): void {
       try {
         const budgetId = getActiveBudgetIdOrError();
         const payees = await payeeStore.getState().getPayees(budgetId);
-        return successResult(`Payees for budget ${budgetId}`, { data: { payees } });
+
+        // Build metadata
+        const metadata = buildMetadata({
+          count: payees.length,
+          cached: true,
+        });
+
+        const flatResponse = {
+          payees,
+          metadata,
+        };
+
+        return successResult(`${metadata.count} payee(s) retrieved`, flatResponse);
       } catch (error) {
         return errorResult(error);
       }

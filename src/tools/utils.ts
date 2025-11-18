@@ -247,3 +247,37 @@ export function getResultSizeWarning(
   }
   return "";
 }
+
+/**
+ * Response metadata for list responses
+ */
+export interface ResponseMetadata {
+  count: number;
+  filters?: Record<string, any>;
+  endpoint?: string;
+  cached?: boolean;
+}
+
+/**
+ * Build metadata for list responses
+ */
+export function buildMetadata(options: {
+  count: number;
+  filters?: Record<string, any>;
+  endpoint?: string;
+  cached?: boolean;
+}): ResponseMetadata {
+  const metadata: ResponseMetadata = {
+    count: options.count,
+  };
+  if (options.filters && Object.keys(options.filters).length > 0) {
+    metadata.filters = options.filters;
+  }
+  if (options.endpoint) {
+    metadata.endpoint = options.endpoint;
+  }
+  if (options.cached !== undefined) {
+    metadata.cached = options.cached;
+  }
+  return metadata;
+}

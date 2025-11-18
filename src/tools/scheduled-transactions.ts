@@ -6,7 +6,7 @@ import {
   getScheduledTransactions,
   updateScheduledTransaction,
 } from "../api/index.js";
-import { errorResult, isReadOnly, readOnlyResult, successResult, getActiveBudgetIdOrError, getCurrencyFormat } from "./utils.js";
+import { errorResult, isReadOnly, readOnlyResult, successResult, getActiveBudgetIdOrError, getCurrencyFormat, buildMetadata } from "./utils.js";
 import { addFormattedAmounts } from "../utils/response-transformer.js";
 import {
   resolveAccountId,
@@ -42,16 +42,29 @@ export function registerGetScheduledTransactionsTool(server: McpServer): void {
         const budgetId = getActiveBudgetIdOrError();
         const response = await getScheduledTransactions({ budgetId, ...args });
 
+        const scheduledTransactions = response.data.scheduled_transactions;
+
+        // Build metadata
+        const metadata = buildMetadata({
+          count: scheduledTransactions.length,
+          cached: false,
+        });
+
+        const flatResponse = {
+          scheduled_transactions: scheduledTransactions,
+          metadata,
+        };
+
         // Add formatted currency amounts
         const currencyFormat = await getCurrencyFormat();
         const formattedResponse = addFormattedAmounts(
-          response,
+          flatResponse,
           currencyFormat,
           args.includeMilliunits ?? false,
         );
 
         return successResult(
-          `Scheduled transactions for budget ${budgetId}`,
+          `${metadata.count} scheduled transaction(s) retrieved`,
           formattedResponse,
         );
       } catch (error) {

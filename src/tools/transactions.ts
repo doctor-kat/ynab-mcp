@@ -21,6 +21,7 @@ import {
   readOnlyResult,
   resolveDate,
   successResult,
+  buildMetadata,
 } from "./utils.js";
 import {
   resolveAccountId,
@@ -193,6 +194,35 @@ export function registerGetTransactionsTool(server: McpServer): void {
           },
         };
 
+        // Build metadata with filters
+        const filters: Record<string, any> = {};
+        if (args.accountId) filters.accountId = args.accountId;
+        if (args.categoryId) filters.categoryId = args.categoryId;
+        if (args.payeeId) filters.payeeId = args.payeeId;
+        if (args.month) filters.month = args.month;
+        if (sinceDate) filters.sinceDate = sinceDate;
+        if (args.type) filters.type = args.type;
+        if (args.minAmount !== undefined) filters.minAmount = args.minAmount;
+        if (args.maxAmount !== undefined) filters.maxAmount = args.maxAmount;
+        if (args.limit !== undefined) filters.limit = args.limit;
+
+        const metadata = buildMetadata({
+          count: items.length,
+          filters,
+          cached: false,
+        });
+
+        // Add truncation info if applicable
+        if (truncated) {
+          (metadata as any).truncated = true;
+          (metadata as any).originalCount = originalCount;
+        }
+
+        const flatResponse = {
+          transactions: items,
+          metadata,
+        };
+
         // Generate warning message for large result sets
         const warning = getResultSizeWarning(
           items.length,
@@ -204,22 +234,8 @@ export function registerGetTransactionsTool(server: McpServer): void {
           ? `${items.length}/${originalCount} transaction(s)`
           : `${items.length} transaction(s)`;
 
-        // Build context-specific message
-        let context = `budget ${budgetId}`;
-        if (args.accountId) context = `account ${args.accountId} in ${context}`;
-        if (args.categoryId)
-          context = `category ${args.categoryId} in ${context}`;
-        if (args.payeeId) context = `payee ${args.payeeId} in ${context}`;
-        if (args.month) context = `month ${args.month} in ${context}`;
-        if (args.minAmount !== undefined || args.maxAmount !== undefined) {
-          const amountFilter = [];
-          if (args.minAmount !== undefined) amountFilter.push(`minAmount: ${args.minAmount}`);
-          if (args.maxAmount !== undefined) amountFilter.push(`maxAmount: ${args.maxAmount}`);
-          context = `${context} (filtered by ${amountFilter.join(", ")})`;
-        }
-
         const message = [
-          `Transactions for ${context}: ${countDisplay}`,
+          `${countDisplay} retrieved`,
           warning,
         ]
           .filter(Boolean)
@@ -228,7 +244,7 @@ export function registerGetTransactionsTool(server: McpServer): void {
         // Add formatted currency amounts
         const currencyFormat = await getCurrencyFormat();
         const formattedResponse = addFormattedAmounts(
-          limitedResponse,
+          flatResponse,
           currencyFormat,
           args.includeMilliunits ?? false,
         );

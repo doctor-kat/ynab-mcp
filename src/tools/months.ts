@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { getBudgetMonth, getBudgetMonths } from "../api/index.js";
-import { errorResult, successResult, getActiveBudgetIdOrError, getCurrencyFormat } from "./utils.js";
+import { errorResult, successResult, getActiveBudgetIdOrError, getCurrencyFormat, buildMetadata } from "./utils.js";
 import { addFormattedAmounts } from "../utils/response-transformer.js";
 
 export function registerGetBudgetMonthsTool(server: McpServer): void {
@@ -32,16 +32,29 @@ export function registerGetBudgetMonthsTool(server: McpServer): void {
         const budgetId = getActiveBudgetIdOrError();
         const response = await getBudgetMonths({ budgetId, ...args });
 
+        const months = response.data.months;
+
+        // Build metadata
+        const metadata = buildMetadata({
+          count: months.length,
+          cached: false,
+        });
+
+        const flatResponse = {
+          months,
+          metadata,
+        };
+
         // Add formatted currency amounts
         const currencyFormat = await getCurrencyFormat();
         const formattedResponse = addFormattedAmounts(
-          response,
+          flatResponse,
           currencyFormat,
           args.includeMilliunits ?? false,
         );
 
         return successResult(
-          `Budget months for budget ${budgetId}`,
+          `${metadata.count} budget month(s) retrieved`,
           formattedResponse,
         );
       } catch (error) {

@@ -5,7 +5,7 @@ import {
   getBudgets,
 } from "../api/index.js";
 import { settingsStore } from "../cache/index.js";
-import { errorResult, successResult, getActiveBudgetIdOrError, getCurrencyFormat } from "./utils.js";
+import { errorResult, successResult, getActiveBudgetIdOrError, getCurrencyFormat, buildMetadata } from "./utils.js";
 import { addFormattedAmounts } from "../utils/response-transformer.js";
 
 export function registerGetBudgetsTool(server: McpServer): void {
@@ -35,15 +35,32 @@ export function registerGetBudgetsTool(server: McpServer): void {
       try {
         const response = await getBudgets(args);
 
+        const budgets = response.data.budgets;
+
+        // Build metadata
+        const filters: Record<string, any> = {};
+        if (args.includeAccounts !== undefined) filters.includeAccounts = args.includeAccounts;
+
+        const metadata = buildMetadata({
+          count: budgets.length,
+          filters,
+          cached: true,
+        });
+
+        const flatResponse = {
+          budgets,
+          metadata,
+        };
+
         // Add formatted currency amounts
         const currencyFormat = await getCurrencyFormat();
         const formattedResponse = addFormattedAmounts(
-          response,
+          flatResponse,
           currencyFormat,
           args.includeMilliunits ?? false,
         );
 
-        return successResult("Budgets retrieved", formattedResponse);
+        return successResult(`${metadata.count} budget(s) retrieved`, formattedResponse);
       } catch (error) {
         return errorResult(error);
       }

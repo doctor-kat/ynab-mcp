@@ -2,7 +2,7 @@ import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { createAccount } from "../api/index.js";
 import { accountStore } from "../cache/index.js";
-import { errorResult, isReadOnly, readOnlyResult, successResult, getActiveBudgetIdOrError, getCurrencyFormat } from "./utils.js";
+import { errorResult, isReadOnly, readOnlyResult, successResult, getActiveBudgetIdOrError, getCurrencyFormat, buildMetadata } from "./utils.js";
 import { addFormattedAmounts } from "../utils/response-transformer.js";
 
 export function registerGetAccountsTool(server: McpServer): void {
@@ -28,15 +28,26 @@ export function registerGetAccountsTool(server: McpServer): void {
         const budgetId = getActiveBudgetIdOrError();
         const accounts = await accountStore.getState().getAccounts(budgetId);
 
+        // Build metadata
+        const metadata = buildMetadata({
+          count: accounts.length,
+          cached: true,
+        });
+
+        const flatResponse = {
+          accounts,
+          metadata,
+        };
+
         // Add formatted currency amounts
         const currencyFormat = await getCurrencyFormat();
         const formattedResponse = addFormattedAmounts(
-          { data: { accounts } },
+          flatResponse,
           currencyFormat,
           args.includeMilliunits ?? false,
         );
 
-        return successResult(`Accounts for budget ${budgetId}`, formattedResponse);
+        return successResult(`${metadata.count} account(s) retrieved`, formattedResponse);
       } catch (error) {
         return errorResult(error);
       }
