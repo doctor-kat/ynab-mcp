@@ -24,7 +24,7 @@ export function registerGetBudgetMonthsTool(server: McpServer): void {
     "ynab.getBudgetMonths",
     {
       title: "Get budget months",
-      description: "Get all budget months.",
+      description: "Returns list of budget months.",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -69,7 +69,7 @@ export function registerGetBudgetMonthTool(server: McpServer): void {
     month: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .describe("Budget month as first day of month (YYYY-MM-DD). Example: '2025-01-01' for January 2025."),
+      .describe("Budget month as first day of month (YYYY-MM-DD). Must be first day of month. Example: '2025-01-01' for January, not '2025-01-15'."),
     includeMilliunits: z
       .boolean()
       .optional()

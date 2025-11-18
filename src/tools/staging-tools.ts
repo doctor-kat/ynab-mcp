@@ -51,7 +51,8 @@ export function registerStageCategorizationTool(server: McpServer): void {
     {
       title: "Stage transaction categorization",
       description:
-        "Stage a category change for review before applying. Use getStagedChanges to inspect and applyStagedChanges to commit.",
+        "Stage a category change for review before applying. Use getStagedChanges to inspect and applyStagedChanges to commit. " +
+        "In-memory only - changes cleared on server restart. Session-scoped - not shared between MCP connections.",
       inputSchema: schemaBase.shape,
     },
     async (args: SchemaType) => {
@@ -189,7 +190,9 @@ export function registerStageSplitTool(server: McpServer): void {
     {
       title: "Stage transaction split",
       description:
-        "Stage a transaction split for review before applying. Subtransactions must sum to transaction total. Use getStagedChanges to inspect and applyStagedChanges to commit.",
+        "Stage a transaction split for review before applying. Subtransactions must sum to transaction total. Use getStagedChanges to inspect and applyStagedChanges to commit. " +
+        "Minimum 2 subtransactions required. Replaces any existing split - cannot merge with existing subtransactions. " +
+        "In-memory only - changes cleared on server restart. Session-scoped - not shared between MCP connections.",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -355,7 +358,8 @@ export function registerBulkCategorizeTool(server: McpServer): void {
     {
       title: "Bulk categorize transactions",
       description:
-        "Stage category changes for multiple transactions at once. More efficient than staging individually. Use getStagedChanges to inspect and applyStagedChanges to commit.",
+        "Stage category changes for multiple transactions at once. More efficient than staging individually. Use getStagedChanges to inspect and applyStagedChanges to commit. " +
+        "Stages changes in-memory, cleared on server restart.",
       inputSchema: schemaBase.shape,
     },
     async (args: SchemaType) => {
@@ -474,7 +478,7 @@ export function registerReviewChangesTool(server: McpServer): void {
     "ynab.getStagedChanges",
     {
       title: "Get staged changes",
-      description: "List all staged changes awaiting approval. Shows what will happen when applyStagedChanges is called.",
+      description: "List all staged changes awaiting approval. Shows what will happen when applyStagedChanges is called. Shows in-memory staged changes for current session only.",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -552,7 +556,7 @@ export function registerApplyChangesTool(server: McpServer): void {
     "ynab.applyStagedChanges",
     {
       title: "Apply staged changes",
-      description: "Commit staged changes to YNAB. Makes changes permanent.",
+      description: "Commit staged changes to YNAB. Makes changes permanent. Commits changes permanently to YNAB. Successfully applied changes are removed from staging.",
       inputSchema: schema.shape,
     },
     async (args) => {
@@ -683,7 +687,7 @@ export function registerClearChangesTool(server: McpServer): void {
     "ynab.clearStagedChanges",
     {
       title: "Clear staged changes",
-      description: "Discard staged changes without applying them.",
+      description: "Discard staged changes without applying them. Discards in-memory changes without applying them.",
       inputSchema: schema.shape,
     },
     async (args) => {

@@ -53,12 +53,14 @@ Implement all 32 identified improvements to optimize token usage, improve LLM co
 
 **Completed:** Renamed 5 tools (3 staging, 2 budget) for consistency. Updated 7 files including src code, tests, and documentation (CLAUDE.md, README.md). All cross-references in error messages, tool descriptions, and parameter descriptions updated. Function names unchanged, only MCP tool registration names modified.
 
-### 2.3 Add Missing Documentation
+### 2.3 Add Missing Documentation ✅
 
-- [ ] Add milliunit helper constant used across all amount parameters
-- [ ] Document in-memory staging persistence behavior
-- [ ] Add date validation hints (first-of-month for budgets)
-- [ ] Add edge case documentation to complex tools
+- [x] Add milliunit helper constant used across all amount parameters
+- [x] Document in-memory staging persistence behavior
+- [x] Add date validation hints (first-of-month for budgets)
+- [x] Add edge case documentation to complex tools
+
+**Completed:** Enhanced 12 tool descriptions across 5 files. Added persistence documentation to 4 staging tools (in-memory, session-scoped, cleared on restart). Added date validation hints to 4 month-related parameters (first day of month requirement). Added edge case documentation to 3 tools (pending transaction exclusion, past date validation, non-negative budget amounts).
 
 ## Phase 3: Workflow Optimizations
 

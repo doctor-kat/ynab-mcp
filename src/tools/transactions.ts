@@ -105,7 +105,7 @@ export function registerGetTransactionsTool(server: McpServer): void {
     {
       title: "Get transactions",
       description:
-        "Get transactions with optional filters (account, category, payee, month, date, amount). Excludes pending transactions. ⚠️ Can return large payloads - use filters to reduce size: sinceDate (ISO format), sinceDaysAgo (e.g., 7 for last week), sinceRelative ('week'/'month'/'quarter'/'year'), minAmount/maxAmount (accepts '$50.00' or 50), limit (max results).",
+        "Get transactions with optional filters (account, category, payee, month, date, amount). Excludes pending and scheduled transactions. Date filters are inclusive (transactions ON sinceDate are included). ⚠️ Can return large payloads - use filters to reduce size: sinceDate (ISO format), sinceDaysAgo (e.g., 7 for last week), sinceRelative ('week'/'month'/'quarter'/'year'), minAmount/maxAmount (accepts '$50.00' or 50), limit (max results).",
       inputSchema: schema.shape,
     },
     async (args: any) => {

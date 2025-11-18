@@ -221,7 +221,7 @@ export function registerGetMonthCategoryByIdTool(server: McpServer): void {
     month: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .describe("Budget month as first day of month (YYYY-MM-DD). Example: '2025-01-01' for January 2025."),
+      .describe("Budget month as first day of month (YYYY-MM-DD). Must be first day of month. Example: '2025-01-01' for January, not '2025-01-15'."),
     categoryId: z.string().min(1).describe("Category ID. UUID format."),
     includeMilliunits: z
       .boolean()
@@ -286,11 +286,11 @@ export function registerUpdateMonthCategoryTool(server: McpServer): void {
     month: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .describe("Budget month as first day of month (YYYY-MM-DD). Example: '2025-01-01' for January 2025."),
+      .describe("Budget month as first day of month (YYYY-MM-DD). Must be first day of month. Example: '2025-01-01' for January, not '2025-01-15'."),
     categoryId: z.string().min(1).describe("Category ID. UUID format."),
     category: z
       .object({
-        budgeted: z.number().int().describe("Budgeted amount in milliunits (1000 milliunits = $1.00). Example: 50000 for $50.00"),
+        budgeted: z.number().int().describe("Budgeted amount in milliunits (1000 milliunits = $1.00). Must be non-negative (use 0 to remove budget). Example: 50000 for $50.00"),
       })
       .passthrough()
       .describe("Category update fields"),
@@ -308,7 +308,7 @@ export function registerUpdateMonthCategoryTool(server: McpServer): void {
     {
       title: "Update month category",
       description:
-        "Update a category for a specific month in the active budget. Only budgeted amount can be updated.",
+        "Update a category for a specific month in the active budget. Only budgeted amount can be updated. Budgeted amounts must be non-negative (use 0 to remove budget).",
       inputSchema: schema.shape,
     },
     async (args) => {

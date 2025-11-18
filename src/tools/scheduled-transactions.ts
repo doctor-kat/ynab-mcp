@@ -145,7 +145,7 @@ export function registerCreateScheduledTransactionTool(
     "ynab.createScheduledTransaction",
     {
       title: "Create scheduled transaction",
-      description: "Create a scheduled (recurring/future) transaction.",
+      description: "Create a scheduled (recurring/future) transaction. date_first cannot be in the past. Use frequency='never' for one-time scheduled transactions.",
       inputSchema: schema.shape,
     },
     async (args) => {
